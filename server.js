@@ -371,7 +371,7 @@ async function buildAuthContext(req) {
 
 function isPublicPath(path) {
   // Static assets and public pages — no auth required
-  if (path === '/healthz' || path === '/login.html' || path === '/api/auth' || path.startsWith('/assets/') || path.startsWith('/api/evidence/share/') || path.startsWith('/vendor/')) return true;
+  if (path === '/' || path === '/healthz' || path === '/login.html' || path === '/api/auth' || path.startsWith('/assets/') || path.startsWith('/api/evidence/share/') || path.startsWith('/vendor/')) return true;
   // All static files (CSS, JS, SVG, JSON, fonts)
   if (/\.(css|js|svg|png|jpg|jpeg|gif|ico|woff2?|ttf|eot|json|map)$/i.test(path)) return true;
   // All HTML pages
@@ -505,6 +505,7 @@ app.post('/api/auth', async (req, res) => {
 
 // ---------- Static + APIs ----------
 app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.get('/', (req, res) => res.redirect('/dashboard.html'));
 app.use(authMiddleware);
 app.use(requireAdminPage);
 app.use(recordPageAccess);

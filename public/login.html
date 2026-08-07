@@ -122,8 +122,9 @@
       localStorage.setItem('attest_token', data.token);
       localStorage.setItem('attest_user', JSON.stringify({ email: data.email, isAdmin: data.isAdmin, approverName: data.approverName }));
 
-      // Redirect
+      // Redirect — ensure we never bounce back to root
       var redirect = new URLSearchParams(location.search).get('redirect') || '/dashboard.html';
+      if (redirect === '/' || redirect === '/login.html') redirect = '/dashboard.html';
       location.href = redirect;
     } catch (err) {
       errorEl.textContent = err.message;
