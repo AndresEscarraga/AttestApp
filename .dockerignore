@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.vscode
+.idea
+data
+test-e2e.js
+*.md
+docs
+deploy
+.env
+.env.*
+*.log
+tmp
+.agents
+.gcloudignore

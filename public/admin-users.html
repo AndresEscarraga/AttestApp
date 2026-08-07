@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attest — Admin Users</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Admin</div>
+      <a class="sidebar-item" href="/admin.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/activity.html"><span class="item-icon">📋</span>Activity Log</a>
+      <a class="sidebar-item active"><span class="item-icon">👥</span>Admin Users</a>
+    </div>
+  </nav>
+</aside>
+<div class="main">
+  <header class="topbar"><div class="topbar-breadcrumb">Attest › <span>Admin Users</span></div></header>
+  <div class="content">
+    <div class="content-header"><h1>Admin Users</h1><p>Manage the email addresses allowed to access admin-only tools.
+      Technical Support admins are protected and cannot be removed.
+    </p>
+  </header>
+
+  <main>
+    <section class="admin-toolbar">
+      <form id="adminUserForm" class="admin-user-form">
+        <label>Admin email
+          <input id="adminEmailInput" type="email" placeholder="admin@example.com" required />
+        </label>
+        <button class="btn-primary" type="submit">Add admin</button>
+      </form>
+      <p class="modal-error" id="adminUserError"></p>
+    </section>
+
+    <div class="table-scroll">
+      <table id="adminUsersTable" class="log-table">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Type</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="adminUsersBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="adminUsersEmpty" hidden>No admin users found.</p>
+  </div>
+</div>
+
+  <script src="admin-users.js"></script>
+</body>
+</html>

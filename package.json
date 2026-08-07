@@ -1,0 +1,30 @@
+{
+  "name": "attestapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "start:local:admin": "set DEV_AUTH_EMAIL=admin.one@attest.local&& node server.js",
+    "start:local:approver": "set DEV_AUTH_EMAIL=approver.one@attest.local&& node server.js",
+    "start:local:denied": "set DEV_AUTH_EMAIL=denied.user@attest.local&& node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "multer": "^2.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

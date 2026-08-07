@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attest — Activity Log</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Admin</div>
+      <a class="sidebar-item" href="/admin.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item active"><span class="item-icon">📋</span>Activity Log</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Admin Users</a>
+    </div>
+  </nav>
+</aside>
+<div class="main">
+  <header class="topbar"><div class="topbar-breadcrumb">Attest › <span>Activity Log</span></div></header>
+  <div class="content">
+    <div class="content-header"><h1>Activity Log</h1><p>Application activity across the whole app: authentication and page access,
+      review submissions, and RITM changes. Newest events first.
+    </p>
+  </header>
+
+  <main>
+    <section class="admin-toolbar">
+      <div class="admin-filters">
+        <label>Type
+          <select id="filterType">
+            <option value="">All</option>
+            <option value="AUTH">Authentication / access</option>
+            <option value="SUBMISSION">Submissions</option>
+            <option value="RITM">RITM changes</option>
+          </select>
+        </label>
+        <label>User
+          <input id="filterUser" type="search" placeholder="Type to filter..." />
+        </label>
+        <label>From
+          <input id="filterFrom" type="date" />
+        </label>
+        <label>To
+          <input id="filterTo" type="date" />
+        </label>
+      </div>
+      <div class="admin-actions">
+        <button id="refreshBtn" class="btn-secondary">Refresh</button>
+        <button id="exportCsvBtn" class="btn-primary">Export CSV</button>
+      </div>
+    </section>
+
+    <div class="table-scroll">
+      <table id="activityTable" class="log-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Type</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="activityBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="activityEmpty" hidden>No activity matches the current filters.</p>
+  </div>
+</div>
+
+  <script src="activity.js"></script>
+</body>
+</html>

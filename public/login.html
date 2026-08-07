@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Sign In</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#F8FAFC; padding:24px; }
+  [data-theme="dark"] .auth-page { background:#0F172A; }
+  .auth-card { width:100%; max-width:400px; }
+  .auth-logo { text-align:center; margin-bottom:28px; }
+  .auth-logo .logo-icon { width:40px; height:40px; background:linear-gradient(135deg, var(--accent), #06B6D4); border-radius:10px; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:18px; margin-bottom:12px; }
+  .auth-logo h1 { font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--text-primary); }
+  .auth-logo p { font-size:12px; color:var(--text-tertiary); margin-top:2px; }
+  .auth-box { background:var(--bg-surface); border:1px solid var(--border); border-radius:14px; padding:32px; box-shadow:0 2px 16px rgba(0,0,0,.06); }
+  [data-theme="dark"] .auth-box { background:var(--bg-surface); border-color:var(--border); box-shadow:0 2px 16px rgba(0,0,0,.3); }
+  .auth-box h2 { font-size:18px; font-weight:700; margin-bottom:4px; }
+  .auth-box .auth-subtitle { font-size:12px; color:var(--text-tertiary); margin-bottom:24px; }
+  .auth-box .auth-subtitle button { background:none; border:none; color:var(--accent); font-weight:600; cursor:pointer; font:inherit; padding:0; }
+  .auth-box .auth-subtitle button:hover { text-decoration:underline; }
+  .auth-error { background:#FEF2F2; border:1px solid #FECACA; color:var(--danger); padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:16px; display:none; }
+  .auth-error.show { display:block; }
+  .auth-field { margin-bottom:16px; }
+  .auth-field label { display:block; font-size:11px; font-weight:600; color:var(--text-secondary); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+  .auth-field input { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary); background:var(--bg-surface); outline:none; transition:border-color .15s, box-shadow .15s; }
+  [data-theme="dark"] .auth-field input { background:#0F172A; border-color:var(--border); }
+  .auth-field input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(8,145,178,.1); }
+  .auth-field input::placeholder { color:#94A3B8; }
+  .auth-btn { width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition:all .15s; font-family:inherit; }
+  .auth-btn:hover { background:var(--accent-hover); }
+  .auth-btn:disabled { opacity:.6; cursor:not-allowed; }
+  .auth-btn .spinner { display:none; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; margin-right:8px; }
+  .auth-btn.loading .spinner { display:inline-block; }
+  .auth-btn.loading .btn-text { display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .auth-footer { text-align:center; font-size:11px; color:var(--text-tertiary); margin-top:20px; }
+</style>
+</head>
+<body class="auth-page">
+  <div class="auth-card" id="authRoot">
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="logo-icon">A</div>
+      <h1>Attest</h1>
+      <p>Access Certification &amp; Role Governance</p>
+    </div>
+
+    <!-- Card -->
+    <div class="auth-box">
+      <h2 id="authTitle">Welcome back</h2>
+      <p class="auth-subtitle" id="authSubtitle">
+        Don't have an account? <button id="switchBtn">Sign up</button>
+      </p>
+
+      <div class="auth-error" id="authError"></div>
+
+      <form id="authForm">
+        <div class="auth-field" id="nameField" style="display:none">
+          <label>Your name</label>
+          <input type="text" id="nameInput" placeholder="Your full name" autocomplete="name">
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="emailInput" required placeholder="you@company.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="passwordInput" required placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button type="submit" class="auth-btn" id="authBtn">
+          <span class="spinner"></span>
+          <span class="btn-text">Continue</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="auth-footer">&copy; 2026 Attest. Access Certification for compliance teams.</p>
+  </div>
+
+<script>
+(function() {
+  var mode = 'login';
+  var el = function(id) { return document.getElementById(id); };
+
+  // Toggle login/signup
+  el('switchBtn').addEventListener('click', function() {
+    mode = mode === 'login' ? 'signup' : 'login';
+    el('authTitle').textContent = mode === 'login' ? 'Welcome back' : 'Create your account';
+    el('switchBtn').textContent = mode === 'login' ? 'Sign up' : 'Log in';
+    el('authSubtitle').innerHTML = mode === 'login'
+      ? 'Don\'t have an account? <button id="switchBtn">Sign up</button>'
+      : 'Already have an account? <button id="switchBtn">Log in</button>';
+    document.getElementById('switchBtn').addEventListener('click', arguments.callee);
+    el('nameField').style.display = mode === 'signup' ? '' : 'none';
+    if (mode === 'signup') el('nameInput').setAttribute('required', '');
+    else el('nameInput').removeAttribute('required');
+    el('authBtn').querySelector('.btn-text').textContent = mode === 'login' ? 'Continue' : 'Create account';
+    el('authError').classList.remove('show');
+  });
+
+  // Submit
+  el('authForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var errorEl = el('authError'); errorEl.classList.remove('show');
+    var btn = el('authBtn'); btn.classList.add('loading'); btn.disabled = true;
+
+    try {
+      var email = el('emailInput').value.trim();
+      var password = el('passwordInput').value;
+      var name = mode === 'signup' ? el('nameInput').value.trim() : '';
+
+      var res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: mode, email: email, password: password, name: name })
+      });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+
+      // Store token
+      localStorage.setItem('attest_token', data.token);
+      localStorage.setItem('attest_user', JSON.stringify({ email: data.email, isAdmin: data.isAdmin, approverName: data.approverName }));
+
+      // Redirect
+      var redirect = new URLSearchParams(location.search).get('redirect') || '/dashboard.html';
+      location.href = redirect;
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.add('show');
+    } finally {
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

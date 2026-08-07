@@ -1,0 +1,17 @@
+# Dependencies are installed during local setup and Cloud Build.
+node_modules/
+
+# Local runtime persistence and logs.
+data/
+*.log
+
+# Local environment and editor files.
+.env
+.env.*
+.vscode/
+.idea/
+
+# Temporary Office lock files.
+~$*
+docs/architecture/Analisis-Desviaciones-Arquitectura-IT.md
+docs/architecture/Autenticacion-RoleDictionaryApp.svg

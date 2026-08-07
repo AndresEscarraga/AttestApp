@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Admin Log</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Admin</div>
+      <a class="sidebar-item active" href="/admin.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/activity.html"><span class="item-icon">📋</span>Activity Log</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Admin Users</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="avatar" id="sidebarAvatar">AD</div>
+      <div>
+        <div class="user-name">Admin</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-secondary" style="width:100%;margin-top:8px" id="darkToggle">🌙 Dark Mode</button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest › <span>Audit Trail</span></div>
+    <div class="topbar-actions">
+      <select id="impersonateApprover" class="form-select" style="width:auto;padding:5px 10px;font-size:12px">
+        <option value="">Impersonate Approver</option>
+      </select>
+      <button class="btn btn-sm btn-primary" id="impersonateBtn" disabled>Go</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="content-header flex-between">
+      <div>
+        <h1>Audit Trail</h1>
+        <p>Immutable record of every access certification decision.</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" id="refreshBtn">Refresh</button>
+        <button class="btn btn-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
+        <button class="btn btn-primary btn-sm" id="exportPdfBtn">Export PDF</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <div class="card-body" style="padding:12px 20px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Approver</label>
+            <div class="multi-filter" id="filterApproverMulti">
+              <button class="btn btn-secondary btn-sm multi-filter-btn" id="filterApproverBtn">All</button>
+              <div class="multi-filter-menu hidden" id="filterApproverMenu"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Action</label>
+            <div class="multi-filter" id="filterActionMulti">
+              <button class="btn btn-secondary btn-sm multi-filter-btn" id="filterActionBtn">All</button>
+              <div class="multi-filter-menu hidden" id="filterActionMenu"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Role</label>
+            <input id="filterRole" type="search" placeholder="Type to filter..." class="form-input" style="width:180px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">From</label>
+            <input id="filterFrom" type="date" class="form-input" style="width:150px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">To</label>
+            <input id="filterTo" type="date" class="form-input" style="width:150px">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="admin-stats" id="adminStats"></div>
+
+    <!-- Upload Panel -->
+    <div class="upload-panel">
+      <button class="upload-toggle" id="uploadToggle">▶ Data Sources (Upload Excel)</button>
+      <div class="upload-body hidden" id="uploadBody">
+        <div class="upload-row">
+          <div>
+            <div class="upload-zone-label">Roles & Approvers</div>
+            <div class="upload-zone-drop" id="rolesDrop">
+              <span style="font-size:28px">📊</span>
+              <span>Drop <strong>Roles Approvers.xlsx</strong> here</span>
+              <span style="font-size:11px;color:var(--text-tertiary)">or click to browse · .xlsx up to 5 MB</span>
+            </div>
+            <input type="file" id="rolesFileInput" accept=".xlsx" hidden>
+            <div class="upload-status" id="rolesUploadStatus"></div>
+          </div>
+          <div>
+            <div class="upload-zone-label">Transactions & Permissions</div>
+            <div class="upload-zone-drop" id="txDrop">
+              <span style="font-size:28px">📋</span>
+              <span>Drop <strong>Transactions.xlsx</strong> here</span>
+              <span style="font-size:11px;color:var(--text-tertiary)">or click to browse · .xlsx up to 5 MB</span>
+            </div>
+            <input type="file" id="txFileInput" accept=".xlsx" hidden>
+            <div class="upload-status" id="txUploadStatus"></div>
+          </div>
+        </div>
+        <div class="upload-current mt-12" id="uploadCurrent"></div>
+      </div>
+    </div>
+
+    <!-- Log Table -->
+    <div class="card">
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table class="data-table" id="logTable">
+            <thead>
+              <tr>
+                <th data-sort="timestamp">Timestamp</th>
+                <th data-sort="approver">Approver</th>
+                <th data-sort="submittedByEmail">Submitted By</th>
+                <th data-sort="impersonated">Mode</th>
+                <th data-sort="roleName">Role Name</th>
+                <th data-sort="action">Action</th>
+                <th data-sort="actionDetails">Action Details</th>
+                <th data-sort="ritm">RITM</th>
+                <th data-sort="ritmStatus">RITM Status</th>
+                <th data-sort="submissionId">Submission ID</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="text-sm text-muted mt-12" id="emptyMsg" hidden>No submissions match the current filters.</p>
+  </div>
+</div>
+
+<script src="/vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="/vendor/jspdf-autotable/jspdf.plugin.autotable.min.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

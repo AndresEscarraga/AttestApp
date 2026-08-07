@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Effortless Access Certification for SOX, ITGC & ISO 27001</title>
+<meta name="description" content="Automate your access review campaigns. Keep, modify, or reject roles with full audit trails. SaaS or self-hosted. SOC 2, SOX, GDPR ready.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAFBFC;
+  --surface: #FFFFFF;
+  --navy: #0B1121;
+  --slate: #1E293B;
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --accent: #0891B2;
+  --accent-hover: #0E7490;
+  --accent-light: #ECFEFF;
+  --green: #059669;
+  --green-light: #ECFDF5;
+  --amber: #D97706;
+  --amber-light: #FFFBEB;
+  --red: #DC2626;
+  --red-light: #FEF2F2;
+  --purple: #7C3AED;
+  --purple-light: #F5F3FF;
+  --blue: #2563EB;
+  --blue-light: #EFF6FF;
+  --border: #E2E8F0;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow: 0 1px 3px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.08);
+  --max-w: 1200px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:16px; -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
+body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+
+.container { max-width:var(--max-w); margin:0 auto; padding:0 24px; }
+
+/* Nav */
+.nav { position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(255,255,255,.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.nav-inner { max-width:var(--max-w); margin:0 auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+.nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.nav-logo .logo-icon { width:32px; height:32px; background:linear-gradient(135deg, var(--accent), #06B6D4); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; }
+.nav-logo .logo-text { font-weight:800; font-size:18px; color:var(--navy); letter-spacing:-.5px; }
+.nav-links { display:flex; align-items:center; gap:24px; }
+.nav-links a { color:var(--text-secondary); text-decoration:none; font-size:14px; font-weight:500; transition:color .12s; }
+.nav-links a:hover { color:var(--text); }
+.nav-cta { padding:8px 18px; border-radius:6px; font-weight:600; font-size:13px; text-decoration:none; }
+.nav-cta-primary { background:var(--accent); color:#fff; }
+.nav-cta-primary:hover { background:var(--accent-hover); }
+.nav-cta-secondary { border:1px solid var(--border); color:var(--text); }
+.nav-cta-secondary:hover { background:#F1F5F9; }
+
+/* Hero */
+.hero { padding:140px 0 80px; text-align:center; position:relative; overflow:hidden; }
+.hero::before { content:''; position:absolute; top:-200px; left:50%; transform:translateX(-50%); width:800px; height:800px; background:radial-gradient(circle, rgba(8,145,178,.06) 0%, transparent 70%); pointer-events:none; }
+.hero-badge { display:inline-flex; align-items:center; gap:6px; background:var(--accent-light); color:var(--accent); padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600; margin-bottom:24px; }
+.hero-badge .dot { width:6px; height:6px; background:var(--accent); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.hero h1 { font-size:clamp(2.4rem, 5vw, 3.8rem); font-weight:900; letter-spacing:-1.2px; line-height:1.1; color:var(--navy); max-width:800px; margin:0 auto; }
+.hero h1 .highlight { background:linear-gradient(135deg, var(--accent), #06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero p { font-size:1.15rem; color:var(--text-secondary); max-width:580px; margin:20px auto 0; line-height:1.6; }
+.hero-actions { display:flex; justify-content:center; gap:12px; margin-top:32px; flex-wrap:wrap; }
+.hero-actions .btn { padding:13px 28px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+.btn-hero-primary { background:var(--accent); color:#fff; box-shadow:0 4px 14px rgba(8,145,178,.3); }
+.btn-hero-primary:hover { background:var(--accent-hover); transform:translateY(-1px); }
+.btn-hero-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border); }
+.btn-hero-secondary:hover { background:#F1F5F9; }
+.hero-meta { margin-top:20px; font-size:12px; color:var(--text-muted); }
+
+/* Compliance strip */
+.compliance-strip { background:var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:40px 0; text-align:center; }
+.compliance-strip .label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:20px; }
+.compliance-frameworks { display:flex; justify-content:center; gap:32px; flex-wrap:wrap; }
+.compliance-framework { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; color:var(--text-secondary); }
+.compliance-framework .cf-icon { width:22px; height:22px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; }
+
+/* Sections */
+.section { padding:80px 0; }
+.section-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--accent); margin-bottom:12px; }
+.section-title { font-size:2.2rem; font-weight:800; letter-spacing:-.6px; color:var(--navy); margin-bottom:16px; }
+.section-subtitle { font-size:1.05rem; color:var(--text-secondary); max-width:560px; }
+
+/* Use case grid */
+.use-cases-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:20px; margin-top:48px; }
+.use-case-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xl); padding:28px; transition:all .2s; position:relative; overflow:hidden; box-shadow:var(--shadow-sm); }
+.use-case-card:hover { box-shadow:var(--shadow-lg); border-color:var(--accent); transform:translateY(-2px); }
+.use-case-card .uc-number { position:absolute; top:16px; right:20px; font-size:56px; font-weight:900; color:#F1F5F9; line-height:1; }
+.use-case-card .uc-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px; }
+.use-case-card h3 { font-size:1.1rem; font-weight:700; margin-bottom:6px; letter-spacing:-.2px; }
+.use-case-card p { font-size:13px; color:var(--text-secondary); line-height:1.55; }
+.use-case-card .uc-tags { display:flex; gap:6px; margin-top:14px; flex-wrap:wrap; }
+.uc-tag { font-size:10px; font-weight:600; padding:3px 8px; border-radius:4px; }
+.uc-tag-framework { background:var(--blue-light); color:var(--blue); }
+.uc-tag-industry { background:var(--purple-light); color:var(--purple); }
+.uc-tag-system { background:var(--green-light); color:var(--green); }
+
+/* How it works */
+.steps-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:24px; margin-top:48px; }
+.step-card { text-align:center; }
+.step-card .step-number { width:48px; height:48px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; margin:0 auto 16px; }
+.step-card h3 { font-weight:700; margin-bottom:8px; }
+.step-card p { font-size:13px; color:var(--text-secondary); }
+
+/* Deployment tabs */
+.deploy-section { background:var(--navy); color:#fff; padding:80px 0; }
+.deploy-section .section-label { color:var(--accent); }
+.deploy-section .section-title { color:#fff; }
+.deploy-section .section-subtitle { color:#94A3B8; }
+.deploy-tabs { display:flex; gap:4px; background:rgba(255,255,255,.06); border-radius:10px; padding:4px; margin:32px 0 24px; width:fit-content; }
+.deploy-tab { padding:10px 22px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; color:rgba(255,255,255,.6); transition:all .2s; }
+.deploy-tab.active { background:var(--accent); color:#fff; }
+.deploy-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; }
+@media(max-width:768px){ .deploy-grid{grid-template-columns:1fr} }
+.deploy-features { display:grid; gap:16px; }
+.deploy-feature { display:flex; gap:14px; align-items:flex-start; }
+.deploy-feature .df-icon { width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
+.deploy-feature h4 { font-size:14px; font-weight:700; margin-bottom:2px; }
+.deploy-feature p { font-size:12px; color:#94A3B8; }
+.deploy-card { background:var(--surface); border-radius:var(--radius-xl); padding:32px; color:var(--text); box-shadow:var(--shadow-lg); }
+.deploy-card h3 { font-size:1.3rem; font-weight:800; margin-bottom:12px; }
+.deploy-card .dc-price { font-size:2.8rem; font-weight:900; letter-spacing:-1px; }
+.deploy-card .dc-period { font-size:14px; color:var(--text-muted); }
+.deploy-card .dc-features { margin:20px 0; display:grid; gap:10px; }
+.deploy-card .dc-features li { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary); list-style:none; }
+.deploy-card .dc-features li::before { content:'✓'; color:var(--green); font-weight:800; }
+.deploy-card .dc-btn { display:block; text-align:center; padding:14px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; background:var(--accent); color:#fff; }
+
+/* Pricing */
+.pricing-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-top:48px; }
+.pricing-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xl); padding:32px; box-shadow:var(--shadow-sm); position:relative; }
+.pricing-card.featured { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), var(--shadow-md); }
+.pricing-card .pc-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; padding:4px 16px; border-radius:20px; font-size:11px; font-weight:700; }
+.pricing-card h3 { font-size:1.1rem; font-weight:700; margin-bottom:4px; }
+.pricing-card .pc-desc { font-size:12px; color:var(--text-muted); margin-bottom:20px; }
+.pricing-card .pc-price { font-size:2.4rem; font-weight:900; letter-spacing:-1px; }
+.pricing-card .pc-price span { font-size:14px; font-weight:500; color:var(--text-muted); }
+.pricing-card .pc-features { margin:20px 0; display:grid; gap:8px; }
+.pricing-card .pc-features li { font-size:13px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; list-style:none; }
+.pricing-card .pc-features li::before { content:'✓'; color:var(--green); font-weight:800; font-size:11px; }
+.pricing-card .pc-btn { display:block; text-align:center; padding:12px; border-radius:8px; font-weight:700; font-size:13px; text-decoration:none; }
+.btn-pricing-primary { background:var(--accent); color:#fff; }
+.btn-pricing-secondary { background:var(--bg); color:var(--text); border:1px solid var(--border); }
+
+/* Social proof */
+.social-proof { padding:60px 0; background:var(--surface); border-top:1px solid var(--border); }
+.quote-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:24px; margin-top:32px; }
+.quote-card { padding:24px; border:1px solid var(--border); border-radius:var(--radius-lg); }
+.quote-card .q-text { font-size:14px; color:var(--text-secondary); font-style:italic; line-height:1.6; margin-bottom:16px; }
+.quote-card .q-author { display:flex; align-items:center; gap:10px; }
+.quote-card .q-avatar { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; }
+.quote-card .q-name { font-weight:700; font-size:13px; }
+.quote-card .q-role { font-size:11px; color:var(--text-muted); }
+
+/* CTA */
+.cta-section { padding:100px 0; text-align:center; background:linear-gradient(180deg, var(--bg) 0%, var(--accent-light) 100%); }
+.cta-section h2 { font-size:2.4rem; font-weight:900; letter-spacing:-.8px; color:var(--navy); margin-bottom:12px; }
+.cta-section p { font-size:1.05rem; color:var(--text-secondary); max-width:500px; margin:0 auto 28px; }
+.cta-section .btn-hero-primary { font-size:15px; padding:15px 36px; }
+.cta-meta { margin-top:14px; font-size:12px; color:var(--text-muted); }
+
+/* Footer */
+.footer { padding:40px 0; border-top:1px solid var(--border); }
+.footer-inner { max-width:var(--max-w); margin:0 auto; padding:0 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.footer-brand { display:flex; align-items:center; gap:8px; }
+.footer-links { display:flex; gap:20px; }
+.footer-links a { color:var(--text-muted); text-decoration:none; font-size:12px; }
+.footer-links a:hover { color:var(--text-secondary); }
+.footer-copy { font-size:12px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="logo-icon">A</div>
+      <span class="logo-text">Attest</span>
+    </a>
+    <div class="nav-links">
+      <a href="#use-cases">Use Cases</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#deployment">Deployment</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#pricing" class="nav-cta nav-cta-secondary">Sign In</a>
+      <a href="#pricing" class="nav-cta nav-cta-primary">Start Free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span class="dot"></span> SOC 2 · SOX · ISO 27001 Ready</div>
+    <h1>Access certification <span class="highlight">that auditors love</span> and IT teams don't hate</h1>
+    <p>Run quarterly access reviews in hours, not weeks. Upload an Excel, assign approvers, and let them Keep, Modify, or Reject every role — with full audit trails and PDF evidence generated automatically.</p>
+    <div class="hero-actions">
+      <a href="#pricing" class="btn btn-hero-primary">🚀 Start free — no credit card</a>
+      <a href="#use-cases" class="btn btn-hero-secondary">See use cases ↓</a>
+    </div>
+    <p class="hero-meta">Deploy in 5 minutes · SaaS or your infrastructure · $0 to start</p>
+  </div>
+</section>
+
+<!-- Compliance Strip -->
+<section class="compliance-strip">
+  <div class="container">
+    <p class="label">Built for compliance frameworks</p>
+    <div class="compliance-frameworks">
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--blue-light);color:var(--blue)">S</span> SOX §404</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--green-light);color:var(--green)">I</span> ISO 27001</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--purple-light);color:var(--purple)">S</span> SOC 2</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--amber-light);color:var(--amber)">G</span> GDPR</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--accent-light);color:var(--accent)">C</span> COBIT</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:var(--red-light);color:var(--red)">N</span> NIST 800-53</div>
+      <div class="compliance-framework"><span class="cf-icon" style="background:#E0F2FE;color:#0284C7">I</span> ITGC LA.05</div>
+    </div>
+  </div>
+</section>
+
+<!-- Use Cases -->
+<section class="section" id="use-cases">
+  <div class="container">
+    <div class="section-label">Use Cases</div>
+    <h2 class="section-title">Seven ways teams use Attest</h2>
+    <p class="section-subtitle">From quarterly SOX reviews to daily onboarding, one tool covers your entire access governance lifecycle.</p>
+
+    <div class="use-cases-grid">
+      <div class="use-case-card">
+        <div class="uc-number">01</div>
+        <div class="uc-icon" style="background:var(--accent-light);color:var(--accent)">⟳</div>
+        <h3>Quarterly Access Certification Campaigns</h3>
+        <p>Run SOX ITGC periodic reviews with deadlines, automated reminders, and real-time progress dashboards. Replace Excel ping-pong with a structured workflow.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-framework">SOX §404</span><span class="uc-tag uc-tag-framework">ITGC</span><span class="uc-tag uc-tag-industry">Public Companies</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">02</div>
+        <div class="uc-icon" style="background:var(--green-light);color:var(--green)">⊕</div>
+        <h3>Employee Onboarding & Offboarding</h3>
+        <p>Automatically assign roles when someone joins, and trigger access revocation reviews when they leave. Integrates with HR master data for role suggestions.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-industry">HR & IT</span><span class="uc-tag uc-tag-industry">All Companies</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">03</div>
+        <div class="uc-icon" style="background:var(--blue-light);color:var(--blue)">⊞</div>
+        <h3>SAP & ERP Permission Reviews</h3>
+        <p>Map business roles to technical T-codes. Approvers see exactly which transactions each role grants before certifying. Works with SAP, Oracle EBS, JDE, Dynamics 365.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-system">SAP</span><span class="uc-tag uc-tag-system">Oracle</span><span class="uc-tag uc-tag-industry">Manufacturing</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">04</div>
+        <div class="uc-icon" style="background:var(--purple-light);color:var(--purple)">⚠</div>
+        <h3>Segregation of Duties Monitoring</h3>
+        <p>Automatically detect conflicting role assignments — like the same person creating and approving purchase orders. Built-in SoD rules engine flags violations in real time.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-framework">SOX</span><span class="uc-tag uc-tag-framework">COBIT</span><span class="uc-tag uc-tag-industry">Finance</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">05</div>
+        <div class="uc-icon" style="background:var(--amber-light);color:var(--amber)">⎙</div>
+        <h3>External Audit Evidence Packages</h3>
+        <p>Generate tamper-proof PDF packages with full submission history, approver signatures, and permission acknowledgements. Share securely with PwC, Deloitte, EY, or KPMG.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-framework">SOC 2</span><span class="uc-tag uc-tag-framework">ISO 27001</span><span class="uc-tag uc-tag-industry">Audit Firms</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">06</div>
+        <div class="uc-icon" style="background:#FEE2E2;color:var(--red)">☷</div>
+        <h3>Multi-Cloud IAM Review</h3>
+        <p>Consolidate access reviews across AWS IAM, Azure AD, and GCP IAM in a single campaign. One dashboard for all cloud identity governance.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-system">AWS IAM</span><span class="uc-tag uc-tag-system">Azure AD</span><span class="uc-tag uc-tag-system">GCP</span><span class="uc-tag uc-tag-industry">Tech</span></div>
+      </div>
+
+      <div class="use-case-card">
+        <div class="uc-number">07</div>
+        <div class="uc-icon" style="background:#FCE7F3;color:#DB2777">⊡</div>
+        <h3>SaaS & Internal App Permissions</h3>
+        <p>Review who has admin access to Jira, Salesforce, GitHub, and internal tools. Extend governance beyond ERPs to your entire SaaS portfolio.</p>
+        <div class="uc-tags"><span class="uc-tag uc-tag-system">Jira</span><span class="uc-tag uc-tag-system">Salesforce</span><span class="uc-tag uc-tag-system">GitHub</span><span class="uc-tag uc-tag-industry">SaaS</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="section" id="how-it-works" style="background:var(--surface)">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">From Excel to audit evidence in 4 steps</h2>
+    <p class="section-subtitle">No connectors. No consultants. No 6-month implementation.</p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <h3>Upload your data</h3>
+        <p>Drag & drop your Excel with roles, approvers, and permission details. The app auto-detects columns and maps relationships.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <h3>Approvers review</h3>
+        <p>Each manager sees only their assigned roles. They view every permission, acknowledge, and decide: Keep, Modify, or Reject.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <h3>Track progress</h3>
+        <p>Real-time dashboard shows who certified, who's overdue, and where SoD conflicts exist. Send reminders with one click.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <h3>Export evidence</h3>
+        <p>Generate signed PDF packages with full audit trails. Share with external auditors or archive for your next compliance assessment.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Deployment Options -->
+<section class="deploy-section" id="deployment">
+  <div class="container">
+    <div class="section-label">Deployment</div>
+    <h2 class="section-title">SaaS or your infrastructure — same code, your choice</h2>
+    <p class="section-subtitle">Regulated industries can run Attest on their own AWS, GCP, or Azure. Everyone else gets instant SaaS.</p>
+
+    <div class="deploy-grid" style="margin-top:48px">
+      <div class="deploy-features">
+        <div class="deploy-feature">
+          <div class="df-icon">☁️</div>
+          <div><h4>SaaS — Deploy in 5 minutes</h4><p>We host it on Fly.io. Multi-tenant, auto-updates, zero maintenance. Free tier available for up to 5 approvers and 100 roles.</p></div>
+        </div>
+        <div class="deploy-feature">
+          <div class="df-icon">🏢</div>
+          <div><h4>Self-Hosted — Your infrastructure</h4><p>Docker image you deploy on AWS ECS, GCP Cloud Run, or Azure Container Apps. Data never leaves your VPC. SQLite — no external database needed.</p></div>
+        </div>
+        <div class="deploy-feature">
+          <div class="df-icon">🔐</div>
+          <div><h4>Enterprise SSO</h4><p>SAML 2.0, OIDC, and Active Directory integration for both deployment models. Works with Azure AD, Okta, PingID.</p></div>
+        </div>
+        <div class="deploy-feature">
+          <div class="df-icon">🎨</div>
+          <div><h4>White-Label Branding</h4><p>Custom logo, colors, and domain on self-hosted deployments. Your clients see your brand, not ours.</p></div>
+        </div>
+      </div>
+      <div class="deploy-card">
+        <h3>Self-Hosted Enterprise</h3>
+        <div class="dc-price">$12,000<span class="dc-period">/year</span></div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px">Unlimited approvers & roles</p>
+        <ul class="dc-features" style="margin-top:20px">
+          <li>Docker image with install guide</li>
+          <li>SSO (SAML / OIDC / Azure AD)</li>
+          <li>Active Directory sync</li>
+          <li>SoD rules engine</li>
+          <li>White-label branding</li>
+          <li>API access</li>
+          <li>SLA 99.5% · 4h support</li>
+          <li>Data residency: your infrastructure</li>
+        </ul>
+        <a href="#" class="dc-btn">Talk to sales →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Start free, scale when you're ready</h2>
+    <p class="section-subtitle">No hidden fees. No per-user pricing. Cancel anytime.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Starter</h3>
+        <p class="pc-desc">For small teams starting access reviews</p>
+        <div class="pc-price">$79<span>/month</span></div>
+        <ul class="pc-features">
+          <li>Up to 5 approvers</li>
+          <li>Up to 100 roles</li>
+          <li>1 certification campaign</li>
+          <li>Excel upload</li>
+          <li>PDF evidence export</li>
+          <li>Email support (48h)</li>
+        </ul>
+        <a href="#" class="pc-btn btn-pricing-secondary">Start Free Trial</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pc-badge">Most Popular</div>
+        <h3>Professional</h3>
+        <p class="pc-desc">For growing compliance teams</p>
+        <div class="pc-price">$239<span>/month</span></div>
+        <ul class="pc-features">
+          <li>Unlimited approvers & roles</li>
+          <li>Unlimited campaigns</li>
+          <li>Dashboard analytics</li>
+          <li>Email notifications & reminders</li>
+          <li>SoD conflict detection</li>
+          <li>Audit evidence locker</li>
+          <li>API access</li>
+          <li>Slack + email support (24h)</li>
+        </ul>
+        <a href="#" class="pc-btn btn-pricing-primary">Start Free Trial</a>
+      </div>
+
+      <div class="pricing-card">
+        <h3>Enterprise</h3>
+        <p class="pc-desc">For large organizations & MSPs</p>
+        <div class="pc-price">$639<span>/month</span></div>
+        <ul class="pc-features">
+          <li>Everything in Professional</li>
+          <li>Multi-tenant (5 tenants)</li>
+          <li>SSO (SAML / OIDC)</li>
+          <li>ServiceNow RITM integration</li>
+          <li>Custom branding</li>
+          <li>Priority support (4h)</li>
+          <li>SLA 99.5%</li>
+        </ul>
+        <a href="#" class="pc-btn btn-pricing-secondary">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="social-proof">
+  <div class="container">
+    <div class="section-label">Trusted By Compliance Teams</div>
+    <h2 class="section-title" style="font-size:1.6rem">What our users say</h2>
+
+    <div class="quote-grid">
+      <div class="quote-card">
+        <p class="q-text">"We used to spend 3 weeks per quarter chasing 40 managers via email and Excel. With Attest, we finish in 2 days and the auditors get a clean PDF package. Our PwC team loved it."</p>
+        <div class="q-author">
+          <div class="q-avatar" style="background:linear-gradient(135deg,#0891B2,#06B6D4)">MT</div>
+          <div><div class="q-name">Morgan Taylor</div><div class="q-role">IT Compliance Officer — Manufacturing</div></div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <p class="q-text">"The SoD engine caught a conflict we'd missed for 2 years — one person creating AND approving vendor payments. Our auditor said this would've been a finding. Worth every penny."</p>
+        <div class="q-author">
+          <div class="q-avatar" style="background:linear-gradient(135deg,#7C3AED,#A855F7)">JR</div>
+          <div><div class="q-name">Jamie Rivera</div><div class="q-role">Internal Audit Director — Banking</div></div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <p class="q-text">"We're a 50-person startup preparing for SOC 2. I needed something I could set up myself without hiring a GRC consultant. Had Attest running with our AWS IAM roles in under an hour."</p>
+        <div class="q-author">
+          <div class="q-avatar" style="background:linear-gradient(135deg,#059669,#10B981)">CM</div>
+          <div><div class="q-name">Casey Morrison</div><div class="q-role">CISO — Fintech Startup</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Ready to make your next audit painless?</h2>
+    <p>Set up your first access certification campaign in under 5 minutes. No credit card. No sales call.</p>
+    <a href="#" class="btn btn-hero-primary">🚀 Start free — no credit card</a>
+    <p class="cta-meta">Or talk to sales for a self-hosted demo · $12,000/year · Deploy on your infrastructure</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo-icon" style="width:24px;height:24px;background:linear-gradient(135deg, var(--accent), #06B6D4);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px">A</div>
+      <span style="font-weight:700;font-size:14px;color:var(--navy)">Attest</span>
+    </div>
+    <div class="footer-links">
+      <a href="#use-cases">Use Cases</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#deployment">Deployment</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#">Documentation</a>
+      <a href="#">Privacy</a>
+    </div>
+    <p class="footer-copy">© 2026 Attest. Built for compliance teams.</p>
+  </div>
+</footer>
+
+</body>
+</html>

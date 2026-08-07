@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Access Certification & Role Governance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-root: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-sidebar: #0B1121;
+  --bg-sidebar-hover: #1E293B;
+  --bg-sidebar-active: #1E3A5F;
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-sidebar: #CBD5E1;
+  --text-sidebar-muted: #64748B;
+  --accent: #0891B2;
+  --accent-light: #ECFEFF;
+  --accent-hover: #0E7490;
+  --success: #059669;
+  --success-light: #ECFDF5;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --info: #2563EB;
+  --info-light: #EFF6FF;
+  --purple: #7C3AED;
+  --purple-light: #F5F3FF;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.04), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.06), 0 4px 6px rgba(0,0,0,.04);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --sidebar-w: 248px;
+  --topbar-h: 56px;
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+  --bg-root: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-sidebar: #020617;
+  --bg-sidebar-hover: #1E293B;
+  --bg-sidebar-active: #1E3A5F;
+  --border: #334155;
+  --border-light: #1E293B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
+  --text-sidebar: #CBD5E1;
+  --text-sidebar-muted: #64748B;
+  --accent-light: #0F2D3D;
+  --success-light: #0A2E1F;
+  --warning-light: #2D1F0A;
+  --danger-light: #2D0F0F;
+  --info-light: #0F1F3D;
+  --purple-light: #1F0F3D;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.2);
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.3);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.4);
+}
+[data-theme="dark"] .topbar { background:var(--bg-surface); border-color:var(--border); }
+[data-theme="dark"] .topbar-search input { background:#0F172A; border-color:var(--border); color:var(--text-primary); }
+[data-theme="dark"] .data-table tbody tr:hover { background:#1E293B; }
+[data-theme="dark"] .data-table th { background:#0F172A; }
+[data-theme="dark"] .stat-card { background:var(--bg-surface); border-color:var(--border); }
+[data-theme="dark"] .card { background:var(--bg-surface); border-color:var(--border); }
+[data-theme="dark"] .card-header { border-color:var(--border); }
+[data-theme="dark"] .modal-box { background:var(--bg-surface); }
+[data-theme="dark"] .modal-header { border-color:var(--border); }
+[data-theme="dark"] .modal-footer { border-color:var(--border); }
+[data-theme="dark"] .dropzone { background:#0F172A; border-color:var(--border); }
+[data-theme="dark"] .dropzone:hover { background:var(--accent-light); }
+[data-theme="dark"] .btn-secondary { background:var(--bg-surface); border-color:var(--border); color:var(--text-primary); }
+[data-theme="dark"] .toggle { background:#475569; }
+[data-theme="dark"] .badge-neutral { background:#334155; color:var(--text-secondary); }
+[data-theme="dark"] .modal-close { background:var(--bg-root); }
+[data-theme="dark"] .tab:hover { color:var(--text-primary); }
+[data-theme="dark"] .stat-group { background:var(--bg-surface); border-color:var(--border); }
+[data-theme="dark"] .progress-bar { background:#334155; }
+[data-theme="dark"] .switch-row { border-color:var(--border-light); }
+[data-theme="dark"] .upload-current { background:#0F172A; border-color:var(--border); }
+[data-theme="dark"] .timeline-item { border-color:var(--border-light); }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:14px; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+body { font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background:var(--bg-root); color:var(--text-primary); line-height:1.5; height:100vh; display:flex; overflow:hidden; }
+
+/* Sidebar */
+.sidebar { width:var(--sidebar-w); min-width:var(--sidebar-w); height:100vh; background:var(--bg-sidebar); display:flex; flex-direction:column; position:fixed; left:0; top:0; z-index:50; padding:0; }
+.sidebar-logo { padding:16px 20px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,.06); }
+.sidebar-logo .logo-icon { width:28px; height:28px; background:linear-gradient(135deg, var(--accent), #06B6D4); border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; flex-shrink:0; }
+.sidebar-logo .logo-text { font-weight:700; font-size:16px; color:#fff; letter-spacing:-.3px; }
+.sidebar-logo .logo-badge { font-size:10px; background:rgba(255,255,255,.1); color:var(--text-sidebar-muted); padding:2px 6px; border-radius:4px; font-weight:500; }
+.sidebar-nav { flex:1; padding:12px 10px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+.sidebar-section { margin-bottom:2px; }
+.sidebar-section-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--text-sidebar-muted); padding:10px 12px 4px; }
+.sidebar-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:var(--radius-sm); cursor:pointer; color:var(--text-sidebar); font-size:13px; font-weight:500; transition:all .12s; text-decoration:none; position:relative; white-space:nowrap; }
+.sidebar-item:hover { background:var(--bg-sidebar-hover); color:#fff; }
+.sidebar-item.active { background:var(--bg-sidebar-active); color:#fff; font-weight:600; }
+.sidebar-item .item-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; opacity:.75; }
+.sidebar-item.active .item-icon { opacity:1; }
+.sidebar-item .item-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:600; padding:1px 6px; border-radius:10px; }
+.sidebar-item .item-tag { margin-left:auto; font-size:10px; color:var(--accent); font-weight:600; background:rgba(8,145,178,.15); padding:1px 6px; border-radius:4px; }
+.sidebar-footer { padding:12px 14px; border-top:1px solid rgba(255,255,255,.06); }
+.sidebar-user { display:flex; align-items:center; gap:10px; padding:6px 4px; border-radius:var(--radius-sm); cursor:pointer; }
+.sidebar-user:hover { background:var(--bg-sidebar-hover); }
+.sidebar-user .avatar { width:28px; height:28px; border-radius:6px; background:linear-gradient(135deg, #7C3AED, #A855F7); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px; flex-shrink:0; }
+.sidebar-user .user-info { flex:1; min-width:0; }
+.sidebar-user .user-name { font-size:12px; font-weight:600; color:#fff; }
+.sidebar-user .user-role { font-size:10px; color:var(--text-sidebar-muted); }
+.sidebar-tenant { margin-bottom:8px; padding:4px 12px; }
+.sidebar-tenant select { width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:var(--text-sidebar); font-size:11px; padding:6px 8px; border-radius:5px; font-family:inherit; cursor:pointer; }
+
+/* Main */
+.main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+.topbar { height:var(--topbar-h); min-height:var(--topbar-h); background:var(--bg-surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; gap:16px; }
+.topbar-breadcrumb { font-size:12px; color:var(--text-tertiary); display:flex; align-items:center; gap:6px; }
+.topbar-breadcrumb span { color:var(--text-primary); font-weight:600; }
+.topbar-search { flex:1; max-width:400px; position:relative; }
+.topbar-search input { width:100%; background:var(--bg-root); border:1px solid var(--border); padding:7px 12px 7px 34px; border-radius:var(--radius-sm); font-size:12px; font-family:inherit; color:var(--text-primary); outline:none; }
+.topbar-search input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(8,145,178,.08); }
+.topbar-search .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-tertiary); font-size:14px; }
+.topbar-actions { display:flex; align-items:center; gap:4px; margin-left:auto; }
+.topbar-btn { width:34px; height:34px; border-radius:var(--radius-sm); border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-secondary); font-size:16px; transition:all .12s; position:relative; }
+.topbar-btn:hover { background:var(--bg-root); color:var(--text-primary); }
+.topbar-btn .dot { position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--danger); border-radius:50%; border:2px solid #fff; }
+
+.content { flex:1; overflow-y:auto; padding:24px; }
+.content-header { margin-bottom:24px; }
+.content-header h1 { font-size:22px; font-weight:700; color:var(--text-primary); letter-spacing:-.4px; }
+.content-header p { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+
+/* Pages */
+.page { display:none; }
+.page.active { display:block; }
+
+/* Stats grid */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:24px; }
+.stat-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px; box-shadow:var(--shadow-sm); }
+.stat-card .stat-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.stat-card .stat-label { font-size:11px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.5px; }
+.stat-card .stat-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.stat-card .stat-value { font-size:28px; font-weight:800; letter-spacing:-.8px; }
+.stat-card .stat-change { font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+.stat-card .stat-change.up { color:var(--success); }
+.stat-card .stat-change.down { color:var(--danger); }
+.icon-teal { background:var(--accent-light); color:var(--accent); }
+.icon-green { background:var(--success-light); color:var(--success); }
+.icon-blue { background:var(--info-light); color:var(--info); }
+.icon-purple { background:var(--purple-light); color:var(--purple); }
+.icon-amber { background:var(--warning-light); color:var(--warning); }
+
+/* Card */
+.card { background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); overflow:hidden; }
+.card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.card-header h2 { font-size:14px; font-weight:700; letter-spacing:-.2px; }
+.card-body { padding:20px; }
+.card-body.no-pad { padding:0; }
+
+/* Table */
+.data-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.data-table th { text-align:left; padding:10px 14px; font-weight:600; font-size:11px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid var(--border); background:var(--bg-root); white-space:nowrap; }
+.data-table td { padding:10px 14px; border-bottom:1px solid var(--border-light); color:var(--text-primary); }
+.data-table tbody tr:hover { background:#FAFBFC; }
+.data-table tbody tr:last-child td { border-bottom:none; }
+
+/* Badges */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.1px; }
+.badge-success { background:var(--success-light); color:var(--success); }
+.badge-warning { background:var(--warning-light); color:var(--warning); }
+.badge-danger { background:var(--danger-light); color:var(--danger); }
+.badge-info { background:var(--info-light); color:var(--info); }
+.badge-purple { background:var(--purple-light); color:var(--purple); }
+.badge-neutral { background:#F1F5F9; color:var(--text-secondary); }
+.badge-teal { background:var(--accent-light); color:var(--accent); }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; border:none; transition:all .12s; white-space:nowrap; letter-spacing:-.1px; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent-hover); }
+.btn-secondary { background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--bg-root); border-color:#CBD5E1; }
+.btn-ghost { background:transparent; color:var(--text-secondary); }
+.btn-ghost:hover { background:var(--bg-root); color:var(--text-primary); }
+.btn-danger { background:var(--danger); color:#fff; }
+.btn-danger:hover { background:#B91C1C; }
+.btn-sm { padding:5px 10px; font-size:11px; }
+.btn-xs { padding:3px 7px; font-size:10px; border-radius:4px; }
+.btn-group { display:flex; gap:6px; }
+
+/* Progress bar */
+.progress-bar { height:6px; background:#E2E8F0; border-radius:3px; overflow:hidden; }
+.progress-bar .fill { height:100%; border-radius:3px; transition:width .5s ease; }
+.fill-teal { background:var(--accent); }
+.fill-green { background:var(--success); }
+.fill-blue { background:var(--info); }
+.fill-purple { background:var(--purple); }
+
+/* Charts (SVG) */
+.chart-row { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-bottom:24px; }
+@media(max-width:900px){ .chart-row{grid-template-columns:1fr;} .stats-grid{grid-template-columns:repeat(2,1fr);} }
+.chart-placeholder { width:100%; height:200px; }
+
+/* Campaign card */
+.campaign-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:20px; }
+.campaign-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px; cursor:pointer; transition:all .15s; box-shadow:var(--shadow-sm); }
+.campaign-card:hover { border-color:var(--accent); box-shadow:var(--shadow-md); }
+.campaign-card .cc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.campaign-card .cc-title { font-weight:700; font-size:14px; letter-spacing:-.2px; }
+.campaign-card .cc-meta { font-size:11px; color:var(--text-tertiary); display:flex; gap:6px; align-items:center; margin-top:6px; }
+.campaign-card .cc-progress { margin-top:12px; }
+.campaign-card .cc-progress-info { display:flex; justify-content:space-between; font-size:11px; color:var(--text-tertiary); margin-bottom:4px; }
+
+/* Review grid */
+.review-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:900px){ .review-grid{grid-template-columns:1fr;} }
+
+/* Tabs */
+.tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:20px; }
+.tab { padding:10px 18px; font-size:13px; font-weight:500; color:var(--text-tertiary); cursor:pointer; border-bottom:2px solid transparent; transition:all .12s; }
+.tab:hover { color:var(--text-primary); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+
+/* Timeline */
+.timeline-item { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
+.timeline-item:last-child { border-bottom:none; }
+.timeline-dot { width:8px; height:8px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+.timeline-content { flex:1; }
+.timeline-content .tl-title { font-weight:600; }
+.timeline-content .tl-time { font-size:11px; color:var(--text-tertiary); }
+
+/* Modal overlay */
+.modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:100; display:none; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
+.modal-overlay.show { display:flex; }
+.modal-box { background:var(--bg-surface); border-radius:var(--radius-xl); box-shadow:var(--shadow-lg); width:560px; max-width:94vw; max-height:80vh; overflow-y:auto; }
+.modal-box.wide { width:800px; }
+.modal-header { padding:20px 24px 0; display:flex; align-items:center; justify-content:space-between; }
+.modal-header h3 { font-size:16px; font-weight:700; letter-spacing:-.3px; }
+.modal-close { width:28px; height:28px; border-radius:6px; border:none; background:var(--bg-root); cursor:pointer; font-size:16px; color:var(--text-tertiary); display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { background:#E2E8F0; color:var(--text-primary); }
+.modal-body { padding:20px 24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+/* Misc */
+.flex-between { display:flex; align-items:center; justify-content:space-between; }
+.gap-8 { gap:8px; }
+.gap-12 { gap:12px; }
+.mt-12 { margin-top:12px; }
+.mt-16 { margin-top:16px; }
+.mb-12 { margin-bottom:12px; }
+.mb-16 { margin-bottom:16px; }
+.text-sm { font-size:12px; }
+.text-tertiary { color:var(--text-tertiary); }
+.text-mono { font-family:'SF Mono','Fira Code','Consolas',monospace; font-size:11px; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-tertiary); }
+.empty-state .es-icon { font-size:36px; margin-bottom:10px; }
+.switch-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border-light); }
+.switch-row:last-child { border-bottom:none; }
+.switch-label { font-weight:500; font-size:13px; }
+.switch-desc { font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+.toggle { width:40px; height:22px; background:#CBD5E1; border-radius:11px; cursor:pointer; position:relative; transition:background .15s; }
+.toggle.on { background:var(--accent); }
+.toggle::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+.toggle.on::after { transform:translateX(18px); }
+
+/* File drop zone */
+.dropzone { border:2px dashed #CBD5E1; border-radius:var(--radius-lg); padding:32px; text-align:center; cursor:pointer; transition:all .15s; background:var(--bg-root); }
+.dropzone:hover { border-color:var(--accent); background:var(--accent-light); }
+.dropzone .dz-icon { font-size:28px; margin-bottom:8px; }
+.dropzone .dz-text { font-size:13px; color:var(--text-secondary); }
+.dropzone .dz-hint { font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+    <span class="logo-badge">BETA</span>
+  </div>
+
+  <div class="sidebar-tenant">
+    <select>
+      <option>Acme Corporation</option>
+      <option>Global Finance Ltd</option>
+      <option>MedTech Solutions</option>
+    </select>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item active" data-page="dashboard">
+        <span class="item-icon">⊞</span> Dashboard
+      </a>
+      <a class="sidebar-item" data-page="campaigns">
+        <span class="item-icon">⊟</span> Campaigns
+        <span class="item-badge">2</span>
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" data-page="review">
+        <span class="item-icon">☰</span> My Reviews
+        <span class="item-badge">5</span>
+      </a>
+      <a class="sidebar-item" data-page="onboarding">
+        <span class="item-icon">⊕</span> Onboarding
+        <span class="item-tag">NEW</span>
+      </a>
+      <a class="sidebar-item" data-page="offboarding">
+        <span class="item-icon">⊖</span> Offboarding
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" data-page="audit-log">
+        <span class="item-icon">☷</span> Audit Trail
+      </a>
+      <a class="sidebar-item" data-page="sod">
+        <span class="item-icon">⚠</span> SoD Conflicts
+        <span class="item-badge">3</span>
+      </a>
+      <a class="sidebar-item" data-page="evidence">
+        <span class="item-icon">⎙</span> Evidence Locker
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" data-page="data-sources">
+        <span class="item-icon">⇑</span> Data Sources
+      </a>
+      <a class="sidebar-item" data-page="users">
+        <span class="item-icon">👥</span> Users & Roles
+      </a>
+      <a class="sidebar-item" data-page="tenants">
+        <span class="item-icon">⊡</span> Tenants
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" data-page="settings">
+        <span class="item-icon">⚙</span> Configuration
+      </a>
+      <a class="sidebar-item" data-page="api">
+        <span class="item-icon">⌘</span> API Keys
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="avatar">MT</div>
+      <div class="user-info">
+        <div class="user-name">Morgan Taylor</div>
+        <div class="user-role">Compliance Officer</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span id="breadcrumb-label">Dashboard</span></div>
+    <div class="topbar-search">
+      <span class="search-icon">⌕</span>
+      <input type="search" placeholder="Search roles, approvers, campaigns...">
+    </div>
+    <div class="topbar-actions">
+      <select class="lang-select" id="langSelect" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg-root);color:var(--text-primary);font-family:inherit;cursor:pointer">
+        <option>EN</option>
+        <option selected>ES</option>
+      </select>
+      <button class="topbar-btn" title="Toggle dark mode" id="darkToggle" style="font-size:14px">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+
+  <!-- Content area -->
+  <div class="content">
+
+    <!-- ============ DASHBOARD ============ -->
+    <div class="page active" id="page-dashboard">
+      <div class="content-header">
+        <h1>Good morning, Morgan</h1>
+        <p>Q3 Access Certification campaign is 68% complete. Deadline: August 31, 2026.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header"><span class="stat-label">Total Roles Under Review</span><span class="stat-icon icon-teal">⟳</span></div>
+          <div class="stat-value">1,247</div>
+          <div class="stat-change up">↑ 12% vs last quarter</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header"><span class="stat-label">Certification Progress</span><span class="stat-icon icon-green">✓</span></div>
+          <div class="stat-value">68%</div>
+          <div style="margin-top:8px"><div class="progress-bar"><div class="fill fill-green" style="width:68%"></div></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header"><span class="stat-label">Pending Approver Actions</span><span class="stat-icon icon-amber">⟐</span></div>
+          <div class="stat-value">398</div>
+          <div class="stat-change down">5 approvers overdue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header"><span class="stat-label">SoD Conflicts Detected</span><span class="stat-icon icon-purple">⚠</span></div>
+          <div class="stat-value">3</div>
+          <div class="stat-change down">↓ 2 resolved this week</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="card">
+          <div class="card-header"><h2>Certification Progress by System</h2><span class="text-sm text-tertiary">This quarter</span></div>
+          <div class="card-body">
+            <svg viewBox="0 0 600 180" class="chart-placeholder" style="height:180px">
+              <line x1="0" y1="150" x2="600" y2="150" stroke="#E2E8F0" stroke-width="1"/>
+              <line x1="0" y1="112" x2="600" y2="112" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,4"/>
+              <line x1="0" y1="75" x2="600" y2="75" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,4"/>
+              <line x1="0" y1="37" x2="600" y2="37" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,4"/>
+              <text x="5" y="12" font-size="10" font-family="Inter" fill="#94A3B8">100%</text>
+              <text x="5" y="50" font-size="10" font-family="Inter" fill="#94A3B8">75%</text>
+              <text x="5" y="87" font-size="10" font-family="Inter" fill="#94A3B8">50%</text>
+              <text x="5" y="125" font-size="10" font-family="Inter" fill="#94A3B8">25%</text>
+              <rect x="50" y="60" width="70" height="90" rx="4" fill="#0891B2" opacity="0.85"/><text x="85" y="52" font-size="10" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">SAP</text><text x="85" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">76%</text>
+              <rect x="150" y="30" width="70" height="120" rx="4" fill="#059669" opacity="0.85"/><text x="185" y="22" font-size="10" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">Oracle</text><text x="185" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">82%</text>
+              <rect x="250" y="80" width="70" height="70" rx="4" fill="#D97706" opacity="0.85"/><text x="285" y="72" font-size="10" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">JDE</text><text x="285" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">51%</text>
+              <rect x="350" y="110" width="70" height="40" rx="4" fill="#DC2626" opacity="0.85"/><text x="385" y="102" font-size="10" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">Dynamics</text><text x="385" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">28%</text>
+              <rect x="450" y="45" width="60" height="105" rx="4" fill="#7C3AED" opacity="0.85"/><text x="480" y="37" font-size="9" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">AWS</text><text x="480" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">71%</text>
+              <rect x="525" y="70" width="60" height="80" rx="4" fill="#EC4899" opacity="0.85"/><text x="555" y="62" font-size="9" font-family="Inter" fill="#0F172A" font-weight="600" text-anchor="middle">Jira</text><text x="555" y="165" font-size="10" font-family="Inter" fill="#64748B" text-anchor="middle">58%</text>
+            </svg>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Recent Activity</h2></div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--success)"></div><div class="timeline-content"><div class="tl-title">Jamie Rivera approved 12 roles — SAP FI Module</div><div class="tl-time">Today, 10:42 AM</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--accent)"></div><div class="timeline-content"><div class="tl-title">New campaign created: Q3 SOX ITGC Review</div><div class="tl-time">Yesterday, 4:15 PM</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--danger)"></div><div class="timeline-content"><div class="tl-title">SoD conflict flagged: GL Accountant + AP Clerk</div><div class="tl-time">Yesterday, 2:30 PM</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--purple)"></div><div class="timeline-content"><div class="tl-title">Evidence package exported for PwC audit</div><div class="tl-time">Aug 5, 2026</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--info)"></div><div class="timeline-content"><div class="tl-title">Data source updated: Roles Approvers.xlsx</div><div class="tl-time">Aug 4, 2026</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header flex-between">
+          <h2>Active Campaigns</h2>
+          <button class="btn btn-primary btn-sm" data-page="campaigns">+ New Campaign</button>
+        </div>
+        <div class="card-body">
+          <div class="campaign-row">
+            <div class="campaign-card">
+              <div class="cc-header"><span class="cc-title">Q3 SOX ITGC Access Review</span><span class="badge badge-info">In Progress</span></div>
+              <div class="cc-meta">8 approvers · 312 roles · Due Aug 31</div>
+              <div class="cc-progress"><div class="cc-progress-info"><span>68% certified</span><span>212/312</span></div><div class="progress-bar"><div class="fill fill-teal" style="width:68%"></div></div></div>
+            </div>
+            <div class="campaign-card">
+              <div class="cc-header"><span class="cc-title">ISO 27001 Annual Re-certification</span><span class="badge badge-purple">Scheduled</span></div>
+              <div class="cc-meta">12 approvers · 580 roles · Starts Sep 15</div>
+              <div class="cc-progress"><div class="cc-progress-info"><span>Pending start</span><span>0/580</span></div><div class="progress-bar"><div class="fill fill-teal" style="width:0%"></div></div></div>
+            </div>
+            <div class="campaign-card">
+              <div class="cc-header"><span class="cc-title">New Hire Onboarding — Aug 2026</span><span class="badge badge-teal">Active</span></div>
+              <div class="cc-meta">3 new employees · 24 roles assigned</div>
+              <div class="cc-progress"><div class="cc-progress-info"><span>83% completed</span><span>20/24</span></div><div class="progress-bar"><div class="fill fill-green" style="width:83%"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ CAMPAIGNS ============ -->
+    <div class="page" id="page-campaigns">
+      <div class="content-header flex-between">
+        <div><h1>Access Certification Campaigns</h1><p>Create and manage periodic access review campaigns for SOX, ITGC, ISO 27001, and internal compliance.</p></div>
+        <button class="btn btn-primary" onclick="document.getElementById('modal-new-campaign').classList.add('show')">+ New Campaign</button>
+      </div>
+      <div class="card mb-16">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Campaign</th><th>Framework</th><th>Period</th><th>Approvers</th><th>Roles</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>Q3 SOX ITGC Access Review</strong></td><td><span class="badge badge-info">SOX</span></td><td>Q3 2026</td><td>8</td><td>312</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="fill fill-teal" style="width:68%"></div></div>68%</div></td><td><span class="badge badge-info">In Progress</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr>
+              <tr><td><strong>ISO 27001 Annual Re-cert</strong></td><td><span class="badge badge-purple">ISO 27001</span></td><td>2026</td><td>12</td><td>580</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="fill fill-purple" style="width:0%"></div></div>—</div></td><td><span class="badge badge-purple">Scheduled</span></td><td><button class="btn btn-ghost btn-sm">Configure</button></td></tr>
+              <tr><td><strong>SOC 2 Type II — CC6.1 Controls</strong></td><td><span class="badge badge-teal">SOC 2</span></td><td>H2 2026</td><td>5</td><td>145</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="fill fill-teal" style="width:100%"></div></div>100%</div></td><td><span class="badge badge-success">Completed</span></td><td><button class="btn btn-ghost btn-sm">Archive</button></td></tr>
+              <tr><td><strong>GDPR Access Minimization</strong></td><td><span class="badge badge-warning">GDPR</span></td><td>Ongoing</td><td>4</td><td>89</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="fill fill-warning" style="width:45%"></div></div>45%</div></td><td><span class="badge badge-warning">In Progress</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MY REVIEWS ============ -->
+    <div class="page" id="page-review">
+      <div class="content-header flex-between">
+        <div><h1>My Role Reviews</h1><p>Review and certify each business role assigned to you. You must acknowledge all permissions before submitting.</p></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary">Save Draft</button>
+          <button class="btn btn-primary">Submit Certification</button>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(4, 1fr)">
+        <div class="stat-card"><div class="stat-label">Assigned Roles</div><div class="stat-value" style="font-size:24px">24</div></div>
+        <div class="stat-card"><div class="stat-label">Reviewed</div><div class="stat-value" style="font-size:24px;color:var(--success)">19</div></div>
+        <div class="stat-card"><div class="stat-label">Pending Review</div><div class="stat-value" style="font-size:24px;color:var(--warning)">5</div></div>
+        <div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-value" style="font-size:24px;color:var(--danger)">0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Business Role</th><th>System</th><th>Technical Roles</th><th>Status</th><th>Action</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>BE - FINANCE - GENERAL LEDGER</strong></td><td>SAP FI</td><td>SAP_FI_GL_ACCT</td><td><span class="badge badge-warning">Pending</span></td><td>
+                <select style="font-size:11px;padding:4px 8px;border:1px solid #E2E8F0;border-radius:4px;font-family:inherit">
+                  <option>Select action...</option><option>Keep Business Role</option><option>Modify Business Role</option><option>Modify Technical Role</option><option>Reject Business Role</option>
+                </select></td><td><button class="btn btn-ghost btn-xs">View Permissions →</button></td></tr>
+              <tr><td><strong>BE - PROCUREMENT - PURCHASE ORDERS</strong></td><td>SAP MM</td><td>SAP_MM_PUR_BUYER</td><td><span class="badge badge-success">Keep</span></td><td><span class="text-sm text-tertiary">Certified Aug 5</span></td><td><button class="btn btn-ghost btn-xs">View Permissions →</button></td></tr>
+              <tr><td><strong>BE - FINANCE - ACCOUNTS PAYABLE</strong></td><td>SAP FI</td><td>SAP_FI_AP_CLERK (3 T-codes)</td><td><span class="badge badge-warning">Pending</span></td><td>
+                <select style="font-size:11px;padding:4px 8px;border:1px solid #E2E8F0;border-radius:4px;font-family:inherit">
+                  <option>Select action...</option><option>Keep Business Role</option><option>Modify Business Role</option><option>Modify Technical Role</option><option>Reject Business Role</option>
+                </select></td><td><button class="btn btn-ghost btn-xs">View 3 T-codes →</button></td></tr>
+              <tr style="background:#FEF2F2"><td><strong>BE - IT - SYSTEM ADMINISTRATOR</strong></td><td>SAP BASIS</td><td>SAP_BASIS_ADMIN (3 T-codes)</td><td><span class="badge badge-danger">Flagged — SoD</span></td><td>
+                <select style="font-size:11px;padding:4px 8px;border:1px solid #FECACA;border-radius:4px;font-family:inherit;background:#FEF2F2">
+                  <option>Reject Business Role</option>
+                </select></td><td><button class="btn btn-ghost btn-xs">View Conflict →</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OFFBOARDING ============ -->
+    <div class="page" id="page-offboarding">
+      <div class="content-header">
+        <h1>Employee Offboarding — Access Revocation</h1>
+        <p>Review and revoke system access for departing employees. Triggered automatically by HR termination events.</p>
+      </div>
+      <div class="card mb-16">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Employee</th><th>Department</th><th>Last Day</th><th>Active Roles</th><th>Privileged Access</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:#FEF2F2"><td><strong>Alex Kim</strong></td><td>IT Infrastructure</td><td>Aug 20, 2026</td><td>8 roles</td><td><span class="badge badge-danger">4 elevated</span></td><td><span class="badge badge-danger">Urgent — 13d left</span></td><td><button class="btn btn-danger btn-sm">Revoke All</button></td></tr>
+              <tr><td><strong>Sandra Mills</strong></td><td>Procurement</td><td>Aug 31, 2026</td><td>3 roles</td><td><span class="badge badge-neutral">None</span></td><td><span class="badge badge-warning">Pending — 24d left</span></td><td><button class="btn btn-secondary btn-sm">Review</button></td></tr>
+              <tr><td><strong>David Park</strong></td><td>Sales</td><td>Aug 5, 2026</td><td>4 roles</td><td><span class="badge badge-neutral">None</span></td><td><span class="badge badge-success">Revoked — Aug 6</span></td><td><button class="btn btn-ghost btn-sm">View Log</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ONBOARDING ============ -->
+    <div class="page" id="page-onboarding">
+      <div class="content-header">
+        <h1>Employee Onboarding — Role Assignment</h1>
+        <p>Assign and certify access roles for new employees. Integrates with HR master data for automatic role suggestions.</p>
+      </div>
+      <div class="card mb-16">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Employee</th><th>Department</th><th>Position</th><th>Start Date</th><th>Suggested Roles</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>Riley Thompson</strong></td><td>Sales</td><td>Account Executive</td><td>Aug 12, 2026</td><td>4 roles matched</td><td><span class="badge badge-teal">Pending Assignment</span></td><td><button class="btn btn-primary btn-sm">Assign Roles</button></td></tr>
+              <tr><td><strong>Casey Morrison</strong></td><td>IT</td><td>Network Engineer</td><td>Aug 15, 2026</td><td>3 roles matched</td><td><span class="badge badge-teal">Pending Assignment</span></td><td><button class="btn btn-primary btn-sm">Assign Roles</button></td></tr>
+              <tr><td><strong>Quinn Harrison</strong></td><td>Warehouse</td><td>Inventory Specialist</td><td>Aug 5, 2026</td><td>2 roles matched</td><td><span class="badge badge-success">Completed</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ AUDIT TRAIL ============ -->
+    <div class="page" id="page-audit-log">
+      <div class="content-header flex-between">
+        <div><h1>Audit Trail</h1><p>Immutable record of every access certification decision. Filter, export, and present to external auditors.</p></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary">📊 Export XLSX</button>
+          <button class="btn btn-secondary">Export CSV</button>
+          <button class="btn btn-secondary">Export PDF</button>
+          <button class="btn btn-primary">Export Evidence Package</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Timestamp</th><th>Approver</th><th>Role</th><th>Action</th><th>RITM</th><th>RITM Status</th><th>Submission ID</th></tr></thead>
+            <tbody>
+              <tr><td>Aug 7, 2026 10:42</td><td>Jamie Rivera</td><td>BE - HR - PAYROLL PROCESSING</td><td><span class="badge badge-success">Keep</span></td><td>RITM004812</td><td><span class="badge badge-info">Open</span></td><td>000042</td></tr>
+              <tr><td>Aug 7, 2026 09:15</td><td>Casey Morrison</td><td>BE - IT - HELP DESK SUPPORT</td><td><span class="badge badge-info">Modify Technical Role</span></td><td>RITM004810</td><td><span class="badge badge-success">Resolved</span></td><td>000041</td></tr>
+              <tr><td>Aug 6, 2026 16:30</td><td>Riley Thompson</td><td>BE - SALES - ORDER PROCESSING</td><td><span class="badge badge-purple">Modify Business Role</span></td><td>RITM004795</td><td><span class="badge badge-success">Resolved</span></td><td>000040</td></tr>
+              <tr><td>Aug 6, 2026 14:22</td><td>Morgan Taylor</td><td>BE - FINANCE - TAX DEPARTMENT</td><td><span class="badge badge-danger">Reject</span></td><td>RITM004788</td><td><span class="badge badge-warning">On Hold</span></td><td>000039</td></tr>
+              <tr><td>Aug 5, 2026 11:05</td><td>Jamie Rivera</td><td>BE - PROCUREMENT - VENDOR MANAGEMENT</td><td><span class="badge badge-success">Keep</span></td><td>—</td><td>—</td><td>000038</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SoD CONFLICTS ============ -->
+    <div class="page" id="page-sod">
+      <div class="content-header"><h1>Segregation of Duties Conflicts</h1><p>Automated SoD rule engine detects conflicting role assignments across all connected systems.</p></div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Severity</th><th>User</th><th>Conflict</th><th>Role A</th><th>Role B</th><th>Rule</th><th>Detected</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:#FEF2F2"><td><span class="badge badge-danger">Critical</span></td><td>Casey Morrison</td><td>Can create AND approve vendors</td><td>AP Clerk</td><td>GL Accountant</td><td>SOX-AP-001</td><td>Aug 7</td><td><button class="btn btn-danger btn-sm">Mitigate</button></td></tr>
+              <tr style="background:#FFFBEB"><td><span class="badge badge-warning">High</span></td><td>Riley Thompson</td><td>Can create AND release purchase orders</td><td>Purchasing</td><td>Inventory</td><td>SOX-PO-003</td><td>Aug 5</td><td><button class="btn btn-secondary btn-sm">Review</button></td></tr>
+              <tr style="background:#FFFBEB"><td><span class="badge badge-warning">High</span></td><td>Jamie Rivera</td><td>Can modify HR master AND process payroll</td><td>HR Admin</td><td>Payroll</td><td>SOX-HR-007</td><td>Aug 3</td><td><button class="btn btn-secondary btn-sm">Review</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EVIDENCE LOCKER ============ -->
+    <div class="page" id="page-evidence">
+      <div class="content-header flex-between">
+        <div><h1>Evidence Locker</h1><p>Tamper-proof archive of certification PDFs, audit logs, and compliance artifacts for external auditor access.</p></div>
+        <button class="btn btn-primary">Generate Audit Package</button>
+      </div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Package</th><th>Campaign</th><th>Generated</th><th>Format</th><th>Size</th><th>Auditor Access</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>📄 Q3_SOX_Evidence_Package.pdf</td><td>Q3 SOX ITGC Review</td><td>Aug 6, 2026</td><td>PDF + CSV</td><td>4.2 MB</td><td><span class="badge badge-success">Shared (PwC)</span></td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
+              <tr><td>📄 SOC2_CC61_Aug2026.pdf</td><td>SOC 2 Type II</td><td>Aug 4, 2026</td><td>PDF</td><td>2.8 MB</td><td><span class="badge badge-neutral">Internal only</span></td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DATA SOURCES ============ -->
+    <div class="page" id="page-data-sources">
+      <div class="content-header"><h1>Data Sources</h1><p>Upload Excel files with roles, approvers, and transaction permissions. Drag & drop supported.</p></div>
+      <div class="review-grid">
+        <div>
+          <div class="card">
+            <div class="card-header"><h2>Roles & Approvers</h2><span class="badge badge-teal">Last upload: Aug 4</span></div>
+            <div class="card-body">
+              <div class="dropzone"><div class="dz-icon">📊</div><div class="dz-text"><strong>Drop Roles Approvers.xlsx here</strong></div><div class="dz-hint">or click to browse · .xlsx up to 5 MB</div></div>
+              <div class="mt-12 text-sm text-tertiary">Current: 1,247 roles · 48 approvers · 5 columns</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-header"><h2>Transactions & Permissions</h2><span class="badge badge-teal">Last upload: Aug 2</span></div>
+            <div class="card-body">
+              <div class="dropzone"><div class="dz-icon">📋</div><div class="dz-text"><strong>Drop Transactions.xlsx here</strong></div><div class="dz-hint">or click to browse · .xlsx up to 5 MB</div></div>
+              <div class="mt-12 text-sm text-tertiary">Current: 12,430 rows · 15 columns · 1,247 role groups</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ USERS & ROLES ============ -->
+    <div class="page" id="page-users">
+      <div class="content-header flex-between">
+        <div><h1>Users & Role Management</h1><p>Manage admin users, approvers, and role assignments across all tenants.</p></div>
+        <button class="btn btn-primary">+ Add Admin User</button>
+      </div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Email</th><th>Type</th><th>Tenant</th><th>Added</th><th>Last Active</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>admin.one@roledict.local</strong></td><td><span class="badge badge-purple">Superadmin</span></td><td>All</td><td>Jul 15</td><td>Today</td><td><span class="text-sm text-tertiary">Protected</span></td></tr>
+              <tr><td><strong>compliance@acmecorp.com</strong></td><td><span class="badge badge-info">Admin</span></td><td>Acme Corp</td><td>Jul 20</td><td>Yesterday</td><td><button class="btn btn-ghost btn-xs">Remove</button></td></tr>
+              <tr><td><strong>audit@globalfin.com</strong></td><td><span class="badge badge-info">Admin</span></td><td>Global Finance</td><td>Aug 1</td><td>Aug 5</td><td><button class="btn btn-ghost btn-xs">Remove</button></td></tr>
+              <tr><td><strong>approver.one@roledict.local</strong></td><td><span class="badge badge-teal">Approver</span></td><td>Acme Corp</td><td>Jul 15</td><td>Today</td><td><button class="btn btn-ghost btn-xs">Edit Roles</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TENANTS ============ -->
+    <div class="page" id="page-tenants">
+      <div class="content-header flex-between">
+        <div><h1>Multi-Tenant Management</h1><p>Manage isolated environments for each client organization. Each tenant has separate data, users, and campaigns.</p></div>
+        <button class="btn btn-primary">+ New Tenant</button>
+      </div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Tenant</th><th>Plan</th><th>Users</th><th>Campaigns</th><th>Roles</th><th>Created</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Acme Corporation</strong></td><td><span class="badge badge-purple">Enterprise</span></td><td>24</td><td>5 active</td><td>1,247</td><td>Jul 15</td><td><span class="badge badge-success">Active</span></td></tr>
+              <tr><td><strong>Global Finance Ltd</strong></td><td><span class="badge badge-info">Professional</span></td><td>8</td><td>2 active</td><td>430</td><td>Jul 22</td><td><span class="badge badge-success">Active</span></td></tr>
+              <tr><td><strong>MedTech Solutions</strong></td><td><span class="badge badge-teal">Starter</span></td><td>3</td><td>1 active</td><td>98</td><td>Aug 1</td><td><span class="badge badge-warning">Trial</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SETTINGS ============ -->
+    <div class="page" id="page-settings">
+      <div class="content-header"><h1>Configuration</h1><p>Global settings, SSO integration, email notifications, and branding.</p></div>
+      <div class="card mb-16">
+        <div class="card-header"><h2>Single Sign-On (SSO)</h2></div>
+        <div class="card-body">
+          <div class="switch-row"><div><div class="switch-label">SAML 2.0 Authentication</div><div class="switch-desc">Integrate with Azure AD, Okta, PingID, or any SAML IdP</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="switch-row"><div><div class="switch-label">OIDC / OAuth 2.0</div><div class="switch-desc">OpenID Connect for modern identity providers</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="switch-row"><div><div class="switch-label">Active Directory Sync</div><div class="switch-desc">Automatically sync approvers from LDAP/AD groups</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+      <div class="card mb-16">
+        <div class="card-header"><h2>Email Notifications</h2></div>
+        <div class="card-body">
+          <div class="switch-row"><div><div class="switch-label">Campaign reminders</div><div class="switch-desc">Auto-remind approvers 7, 3, and 1 day before deadline</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="switch-row"><div><div class="switch-label">SoD conflict alerts</div><div class="switch-desc">Notify compliance officer when new SoD conflicts are detected</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="switch-row"><div><div class="switch-label">Audit evidence ready</div><div class="switch-desc">Notify when evidence package is generated for auditor download</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>White-Label Branding</h2></div>
+        <div class="card-body">
+          <div class="switch-row"><div><div class="switch-label">Custom logo & colors</div><div class="switch-desc">Replace Attest branding with client brand for self-hosted deployments</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="switch-row"><div><div class="switch-label">Custom domain</div><div class="switch-desc">Serve from compliance.clientdomain.com</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ API KEYS ============ -->
+    <div class="page" id="page-api">
+      <div class="content-header flex-between">
+        <div><h1>API Keys</h1><p>Programmatic access for CI/CD pipelines, external dashboards, and integration with GRC platforms.</p></div>
+        <button class="btn btn-primary">+ Generate New Key</button>
+      </div>
+      <div class="card">
+        <div class="card-body no-pad">
+          <table class="data-table">
+            <thead><tr><th>Key Name</th><th>Prefix</th><th>Permissions</th><th>Created</th><th>Last Used</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>PwC Audit Integration</strong></td><td><span class="text-mono">att_live_pwc...</span></td><td><span class="badge badge-teal">Read-only audit</span></td><td>Aug 1</td><td>Today</td><td><button class="btn btn-ghost btn-xs" style="color:var(--danger)">Revoke</button></td></tr>
+              <tr><td><strong>ServiceNow RITM Sync</strong></td><td><span class="text-mono">att_live_sn...</span></td><td><span class="badge badge-info">Read + Write RITM</span></td><td>Jul 18</td><td>Yesterday</td><td><button class="btn btn-ghost btn-xs" style="color:var(--danger)">Revoke</button></td></tr>
+              <tr><td><strong>CI/CD Health Monitor</strong></td><td><span class="text-mono">att_live_ci...</span></td><td><span class="badge badge-purple">Health check only</span></td><td>Jul 15</td><td>Aug 6</td><td><button class="btn btn-ghost btn-xs" style="color:var(--danger)">Revoke</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- New Campaign Modal -->
+<div class="modal-overlay" id="modal-new-campaign">
+  <div class="modal-box">
+    <div class="modal-header"><h3>New Access Certification Campaign</h3><button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('show')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:grid;gap:14px">
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Template (optional)</label><select style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px"><option>— Blank campaign —</option><option>📋 SOX Quarterly ITGC Review</option><option>📋 ISO 27001 Annual Re-cert</option><option>📋 SOC 2 CC6.1 Controls</option><option>📋 GDPR Access Minimization</option><option>💾 Save current as template...</option></select></div>
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Campaign Name</label><input style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px" value="Q4 SOX ITGC Access Review"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Framework</label><select style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px"><option>SOX / ITGC</option><option>ISO 27001</option><option>SOC 2</option><option>GDPR</option><option>NIST 800-53</option><option>COBIT 2019</option></select></div>
+          <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Period</label><select style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px"><option>Q4 2026</option><option>H2 2026</option><option>Annual 2026</option></select></div>
+        </div>
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Deadline</label><input type="date" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px" value="2026-12-15"></div>
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Approvers</label><textarea style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:12px" rows="2" placeholder="Select approvers or upload CSV list...">Morgan Taylor, Jamie Rivera, Casey Morrison, Riley Thompson</textarea></div>
+        <div style="background:var(--accent-light);padding:12px;border-radius:8px;font-size:12px;color:var(--accent);font-weight:500">💡 This campaign will auto-remind approvers 7, 3, and 1 day before the deadline.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('show')">Cancel</button>
+      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').classList.remove('show')">Create Campaign</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Page navigation
+document.querySelectorAll('.sidebar-item[data-page]').forEach(item => {
+  item.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const pageId = 'page-' + this.dataset.page;
+    document.getElementById(pageId).classList.add('active');
+    document.getElementById('breadcrumb-label').textContent = this.textContent.trim().replace(/\s*\d+\s*$/,'').trim();
+    document.querySelector('.content').scrollTop = 0;
+  });
+});
+
+// Toggle switches
+document.querySelectorAll('.toggle').forEach(t => {
+  t.addEventListener('click', function() { this.classList.toggle('on'); });
+});
+
+// Dark mode toggle
+const darkToggle = document.getElementById('darkToggle');
+darkToggle.addEventListener('click', function() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    html.removeAttribute('data-theme');
+    darkToggle.textContent = '🌙';
+  } else {
+    html.setAttribute('data-theme', 'dark');
+    darkToggle.textContent = '☀️';
+  }
+});
+</script>
+
+</body>
+</html>

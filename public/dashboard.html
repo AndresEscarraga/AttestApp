@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item active" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/admin.html" id="adminLink"><span class="item-icon">☷</span>Audit Trail</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="avatar" id="sidebarAvatar">U</div>
+      <div>
+        <div class="user-name" id="sidebarName">User</div>
+        <div class="user-role" id="sidebarRole"></div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-secondary" style="width:100%;margin-top:8px" id="darkToggle">🌙 Dark Mode</button>
+    <button class="btn btn-sm btn-ghost" style="width:100%;margin-top:4px;color:var(--danger)" id="signOutBtn">Sign Out</button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest › <span>Dashboard</span></div>
+    <div class="topbar-actions"></div>
+  </header>
+
+  <div class="content">
+    <div class="content-header">
+      <h1 id="greeting">Good morning</h1>
+      <p id="dashboardSubtitle">Loading your access certification overview...</p>
+    </div>
+
+    <div class="stats-grid" id="kpiGrid">
+      <div class="stat-card"><div class="stat-label">Total Roles</div><div class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">Certification Progress</div><div class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">Pending Reviews</div><div class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">SoD Conflicts</div><div class="stat-value">—</div></div>
+    </div>
+
+    <div class="chart-row" style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:24px">
+      <div class="card">
+        <div class="card-header flex-between">
+          <h2>Certification Progress by System</h2>
+          <span class="text-sm text-muted">This quarter</span>
+        </div>
+        <div class="card-body" style="min-height:220px">
+          <svg viewBox="0 0 600 180" style="width:100%;height:180px" id="chartSvg">
+            <text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">Loading chart...</text>
+          </svg>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Recent Activity</h2></div>
+        <div class="card-body" id="recentActivity" style="padding:12px 16px;min-height:200px">
+          <div class="text-sm text-muted" style="text-align:center;padding:40px 0">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header flex-between">
+        <h2>Active Campaigns</h2>
+        <button class="btn btn-primary btn-sm">+ New Campaign</button>
+      </div>
+      <div class="card-body" id="activeCampaigns">
+        <div class="text-sm text-muted" style="text-align:center;padding:20px">Loading campaigns...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var el = function(id) { return document.getElementById(id); };
+
+  // JWT token injection
+  var token = localStorage.getItem('attest_token');
+  var origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {}; opts.headers = opts.headers || {};
+    if (token && !opts.headers['Authorization']) opts.headers['Authorization'] = 'Bearer ' + token;
+    return origFetch(url, opts);
+  };
+
+  // Load user info
+  async function loadUser() {
+    try {
+      var res = await fetch('/api/me');
+      var me = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error('Auth failed');
+      var initials = (me.approverName || 'U').split(' ').map(function(n) { return n[0]; }).join('').substring(0,2).toUpperCase();
+      el('sidebarAvatar').textContent = initials;
+      el('sidebarName').textContent = me.approverName || me.email || 'User';
+      el('sidebarRole').textContent = me.isAdmin ? 'Administrator' : 'Approver';
+      el('greeting').textContent = 'Good ' + getTimeOfDay() + ', ' + (me.approverName || 'there');
+      if (me.isAdmin) el('adminLink').style.display = '';
+    } catch(e) {
+      location.href = '/login.html';
+    }
+  }
+
+  function getTimeOfDay() {
+    var h = new Date().getHours();
+    if (h < 12) return 'morning';
+    if (h < 18) return 'afternoon';
+    return 'evening';
+  }
+
+  // Load dashboard data
+  async function loadDashboard() {
+    try {
+      var res = await fetch('/api/dashboard/stats');
+      var data = await res.json();
+      if (!res.ok) throw new Error('Failed');
+      el('dashboardSubtitle').textContent = data.progress + '% of ' + data.totalRoles + ' roles certified. ' + data.pendingCount + ' pending review.';
+      el('kpiGrid').innerHTML =
+        '<div class="stat-card"><div class="stat-label">Total Roles</div><div class="stat-value">' + data.totalRoles + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Certified</div><div class="stat-value">' + data.progress + '%</div><div style="margin-top:8px"><div class="progress-bar"><div class="progress-fill progress-fill-teal" style="width:' + data.progress + '%"></div></div></div></div>' +
+        '<div class="stat-card"><div class="stat-label">Pending Reviews</div><div class="stat-value">' + data.pendingCount + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">SoD Conflicts</div><div class="stat-value" style="color:' + (data.sodConflicts > 0 ? 'var(--danger)' : 'var(--success)') + '">' + data.sodConflicts + '</div></div>';
+
+      // Recent activity
+      var activityHtml = '';
+      (data.recentActivity || []).forEach(function(e) {
+        var dotColor = e.type === 'SUBMISSION' ? 'var(--success)' : e.type === 'AUTH' ? 'var(--accent)' : 'var(--purple)';
+        activityHtml += '<div class="timeline-item"><div class="timeline-dot" style="background:' + dotColor + '"></div><div class="timeline-content"><div class="tl-title">' + escHtml(e.detail || e.action) + '</div><div class="tl-time">' + fmtDate(e.timestamp) + '</div></div></div>';
+      });
+      el('recentActivity').innerHTML = activityHtml || '<div class="text-sm text-muted" style="text-align:center;padding:40px 0">No activity yet.</div>';
+    } catch(e) {
+      el('dashboardSubtitle').textContent = 'Could not load dashboard data.';
+    }
+  }
+
+  // Load chart
+  async function loadChart() {
+    try {
+      var res = await fetch('/api/dashboard/progress-by-system');
+      var systems = await res.json();
+      if (!systems || !systems.length) return;
+      var svg = el('chartSvg');
+      var colors = ['#0891B2','#059669','#D97706','#DC2626','#7C3AED','#2563EB','#EC4899','#F59E0B'];
+      var barW = Math.min(70, Math.floor(500 / systems.length));
+      var html = '<line x1="0" y1="150" x2="600" y2="150" stroke="var(--border)" stroke-width="1"/>';
+      html += '<line x1="0" y1="112" x2="600" y2="112" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      html += '<line x1="0" y1="75" x2="600" y2="75" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      html += '<line x1="0" y1="37" x2="600" y2="37" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      html += '<text x="5" y="12" font-size="10" font-family="Inter" fill="var(--text-tertiary)">100%</text>';
+      html += '<text x="5" y="50" font-size="10" font-family="Inter" fill="var(--text-tertiary)">75%</text>';
+      html += '<text x="5" y="87" font-size="10" font-family="Inter" fill="var(--text-tertiary)">50%</text>';
+      html += '<text x="5" y="125" font-size="10" font-family="Inter" fill="var(--text-tertiary)">25%</text>';
+      var maxBars = Math.min(systems.length, 7);
+      for (var i = 0; i < maxBars; i++) {
+        var sys = systems[i];
+        var x = 50 + i * (barW + 12);
+        var barH = Math.max(4, (sys.pct / 100) * 150);
+        var y = 150 - barH;
+        html += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + colors[i % colors.length] + '" opacity="0.85"/>';
+        html += '<text x="' + (x + barW/2) + '" y="' + (y - 6) + '" font-size="9" font-family="Inter" fill="var(--text-primary)" font-weight="600" text-anchor="middle">' + escHtml(sys.name.substring(0,10)) + '</text>';
+        html += '<text x="' + (x + barW/2) + '" y="165" font-size="10" font-family="Inter" fill="var(--text-tertiary)" text-anchor="middle">' + sys.pct + '%</text>';
+      }
+      svg.innerHTML = html;
+    } catch(e) {}
+  }
+
+  // Load campaigns
+  async function loadCampaigns() {
+    try {
+      var res = await fetch('/api/dashboard/active-campaigns');
+      var campaigns = await res.json();
+      if (!campaigns || !campaigns.length) {
+        el('activeCampaigns').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-tertiary)"><div style="font-size:28px;margin-bottom:8px">📋</div>No active campaigns. Create your first certification campaign.</div>';
+        return;
+      }
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px">';
+      campaigns.forEach(function(c) {
+        var badgeClass = c.status === 'active' ? 'badge-info' : 'badge-success';
+        var badgeText = c.status === 'active' ? 'In Progress' : 'Completed';
+        html += '<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+        html += '<div class="flex-between"><strong>' + escHtml(c.name) + '</strong><span class="badge ' + badgeClass + '">' + badgeText + '</span></div>';
+        html += '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">' + c.approvers + ' approvers · ' + c.totalRoles + ' roles · Due ' + (c.deadline || 'N/A') + '</div>';
+        html += '<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-bottom:4px"><span>' + c.progress + '% certified</span><span>' + c.reviewedRoles + '/' + c.totalRoles + '</span></div><div class="progress-bar"><div class="progress-fill progress-fill-teal" style="width:' + c.progress + '%"></div></div></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      el('activeCampaigns').innerHTML = html;
+    } catch(e) {}
+  }
+
+  // Dark mode
+  el('darkToggle').addEventListener('click', function() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    el('darkToggle').textContent = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
+  });
+
+  // Sign out
+  el('signOutBtn').addEventListener('click', function() {
+    localStorage.removeItem('attest_token');
+    localStorage.removeItem('attest_user');
+    location.href = '/login.html';
+  });
+
+  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch(e) { return iso; } }
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Boot
+  loadUser();
+  loadDashboard();
+  loadChart();
+  loadCampaigns();
+})();
+</script>
+</body>
+</html>

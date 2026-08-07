@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Role Review</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item active" href="/"><span class="item-icon">☰</span>My Reviews</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Admin</div>
+      <a class="sidebar-item" href="/admin.html" id="adminLink"><span class="item-icon">☷</span>Audit Trail</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="avatar" id="sidebarAvatar">MT</div>
+      <div>
+        <div class="user-name" id="sidebarName">Loading...</div>
+        <div class="user-role" id="sidebarRole"></div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-secondary" style="width:100%;margin-top:8px" id="darkToggle">🌙 Dark Mode</button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest › <span>My Reviews</span></div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-ghost" id="signOutBtn" style="display:none">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="content-header flex-between">
+      <div>
+        <h1>My Role Reviews</h1>
+        <p class="signed-in-as" id="signedInName"></p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="printBtn">Print & Submit</button>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="reviewStats"></div>
+
+    <div class="card">
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table id="reviewTable">
+            <thead>
+              <tr class="header-row">
+                <th>Row</th>
+                <th>Business Role</th>
+                <th>Approver</th>
+                <th>Action</th>
+                <th>Action Details</th>
+                <th>Permissions</th>
+              </tr>
+            </thead>
+            <tbody id="reviewTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-footer">
+      <p class="text-sm text-muted" id="submitWarning"></p>
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="addRowBtn">+ Add Row</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Completion Modal -->
+<div class="modal-backdrop hidden" id="completionModal">
+  <div class="modal">
+    <h2>Review Completed</h2>
+    <p>Your review has been submitted successfully.</p>
+    <p class="completion-detail" id="completionDetail"></p>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="newReviewBtn">Make a new review</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="/vendor/jspdf-autotable/jspdf.plugin.autotable.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+.git
+.gitignore
+.vscode
+.idea
+node_modules
+data
+test-e2e.js
+docs
+*.docx
+*.log
+/Arquitectura-GCP-Despliegue.png
+/Arquitectura-GCP-Runtime.png
+.env
+.env.*
