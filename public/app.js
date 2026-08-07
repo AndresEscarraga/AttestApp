@@ -2,24 +2,14 @@
 (function () {
   'use strict';
 
-  // Inject JWT token from localStorage into all fetch requests
-  var token = localStorage.getItem('attest_token');
-  var origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    opts = opts || {};
-    opts.headers = opts.headers || {};
-    if (token && !opts.headers['Authorization']) {
-      opts.headers['Authorization'] = 'Bearer ' + token;
-    }
-    return origFetch(url, opts);
-  };
+  // Auth handled by shared.js — no need to duplicate fetch override here
 
   const ACTIONS = ['Keep Business Role','Modify Business Role','Modify Technical Role','Reject Business Role'];
   const KEEP = ACTIONS[0], REJECT = ACTIONS[3];
 
   const state = { email:'', approver:'', approverRoles:[], rowSeq:0, isAdmin:false, impersonated:false, submitting:false };
 
-  const $" = id => document.getElementById(id);
+  const getEl = id => document.getElementById(id);
 
   // Init
   async function loadCurrentUser() {
@@ -29,9 +19,6 @@
       if (!res.ok) throw new Error(me.error || 'Could not verify your access.');
       state.email = me.email || '';
       state.isAdmin = !!me.isAdmin;
-      // Admin link visibility handled by shared.js role-based sidebar
-      var adminLink = document.getElementById('adminLink');
-      if (adminLink) adminLink.style.display = state.isAdmin ? '' : 'none';
       const params = new URLSearchParams(location.search);
       const imp = params.get('impersonate');
       if (imp) {
@@ -87,35 +74,24 @@
 
   function updateSidebar() {
     const initials = (state.approver || 'U').split(' ').map(function(n){return n[0]}).join('').substring(0,2).toUpperCase();
-    const av = sidebarAvatar, nm = sidebarName, rl = sidebarRole;
+    const av = document.getElementById('sidebarAvatar');
+    const nm = document.getElementById('sidebarName');
+    const rl = document.getElementById('sidebarRole');
     if (av) av.textContent = initials;
     if (nm) nm.textContent = state.approver || 'User';
     if (rl) rl.textContent = state.isAdmin ? 'Administrator' : 'Approver';
-    // Sidebar user info also populated by shared.js
   }
 
-  // Dark mode (topbar button darkToggle2)
-  const dt = document.getElementById('darkToggle2');
-  if (dt) {
-    var saved = localStorage.getItem('attest_theme');
-    if (saved === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      dt.textContent = '☀️';
-    }
-    dt.addEventListener('click', function() {
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      dt.textContent = isDark ? '🌙' : '☀️';
-      localStorage.setItem('attest_theme', isDark ? 'light' : 'dark');
-    });
-  }
-
-  // Sign out handled by shared.js user menu
+  // Dark mode handled by shared.js — no need to duplicate here
 
   loadCurrentUser();
 
   // Review Table
   function init() {
+    var printBtn = getEl('printBtn');
+    var newReviewBtn = getEl('newReviewBtn');
+    var addRowBtn = getEl('addRowBtn');
+
     // If admin has no approver roles, show impersonation panel
     if (state.isAdmin && !state.impersonated && !state.approverRoles.length) {
       showAdminImpersonationPanel();
@@ -124,9 +100,9 @@
     }
 
     state.approverRoles.forEach(function(r){addRow(r)});
-    printBtn.addEventListener('click', onPrintAndSubmit);
-    newReviewBtn.addEventListener('click', function(){location.reload()});
-    addRowBtn.addEventListener('click', function(){addRow('')});
+    if (printBtn) printBtn.addEventListener('click', onPrintAndSubmit);
+    if (newReviewBtn) newReviewBtn.addEventListener('click', function(){location.reload()});
+    if (addRowBtn) addRowBtn.addEventListener('click', function(){addRow('')});
     updateStats();
   }
 
@@ -243,7 +219,7 @@
     txBtn.addEventListener('click', function(){openTxModal(roleName, txBtn)});
     tdTx.appendChild(txBtn); tr.appendChild(tdTx);
 
-    reviewTableBody.appendChild(tr);
+    getEl('reviewTableBody').appendChild(tr);
 
     // SoD flagging
     if (conflictedRoles[roleName]) {

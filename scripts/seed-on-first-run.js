@@ -113,18 +113,12 @@ function generateExcelFiles() {
   for (const a of approvers) {
     emailsRows.push([a.fullName, a.email]);
   }
-  // Map admin emails to an approver so they can see reviews immediately
-  const adminEmails = ['admin.one@attest.local', 'admin.two@attest.local', 'admin.three@attest.local'];
-  for (const ae of adminEmails) {
-    const approver = approvers[adminEmails.indexOf(ae) % approvers.length];
-    emailsRows.push([approver.fullName, ae]);
-  }
-  // Map approver role emails to approvers for My Reviews access
-  emailsRows.push(['Morgan Taylor', 'approver.one@attest.local']);
-  emailsRows.push(['Casey Morrison', 'approver.two@attest.local']);
+  // Map admin emails to approvers (so admins can see reviews without impersonation)
+  emailsRows.push([approvers[0].fullName, 'admin.one@attest.local']);
+  emailsRows.push([approvers[1].fullName, 'admin.two@attest.local']);
   // Also check for real admin email from env
   const realAdmin = process.env.DEV_AUTH_EMAIL || process.env.ADMIN_EMAIL || '';
-  if (realAdmin && realAdmin.includes('@') && !adminEmails.includes(realAdmin)) {
+  if (realAdmin && realAdmin.includes('@')) {
     emailsRows.push([approvers[0].fullName, realAdmin]);
   }
   const wsEmails = XLSX.utils.aoa_to_sheet(emailsRows);
@@ -190,6 +184,9 @@ function seedDatabase() {
     { email: 'admin.two@attest.local', role: 'admin', protected: 0 },
     { email: 'approver.one@attest.local', role: 'approver', protected: 0 },
     { email: 'approver.two@attest.local', role: 'approver', protected: 0 },
+    { email: 'approver.three@attest.local', role: 'approver', protected: 0 },
+    { email: 'approver.four@attest.local', role: 'approver', protected: 0 },
+    { email: 'approver.five@attest.local', role: 'approver', protected: 0 },
     { email: 'auditor.one@attest.local', role: 'auditor', protected: 0 },
     { email: 'auditor.two@attest.local', role: 'auditor', protected: 0 },
     { email: 'superadmin.one@attest.local', role: 'admin', protected: 1 },
@@ -244,21 +241,21 @@ function seedDatabase() {
   const insertSubmission = db.prepare(`INSERT INTO submissions (log_entry_id, submission_id, tenant_id, timestamp, approver, submitted_by_email, impersonated, role_name, action, ritm, ritm_status, action_details, comments, rejection_reason, row_index, campaign_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
   const workflowSubmissions = [
-    // Morgan Taylor — all 4 reviewed (100% complete)
+    // Morgan Taylor — all 4 reviewed (100% complete) — approver.one@attest.local
     { idx:1, approver:'Morgan Taylor', role:'BE - FINANCE - ACCOUNTS PAYABLE', action:'Keep Business Role', ritm:'RITM004810', ritmStatus:'Resolved', days:4, email:'approver.one@attest.local' },
     { idx:2, approver:'Morgan Taylor', role:'BE - FINANCE - ACCOUNTS RECEIVABLE', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:3, email:'approver.one@attest.local' },
     { idx:3, approver:'Morgan Taylor', role:'BE - FINANCE - GENERAL LEDGER', action:'Modify Business Role', ritm:'RITM004795', ritmStatus:'Open', days:3, email:'approver.one@attest.local' },
     { idx:4, approver:'Morgan Taylor', role:'BE - PROCUREMENT - PURCHASE ORDERS', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:2, email:'approver.one@attest.local' },
 
-    // Jamie Rivera — 2 of 3 reviewed, 1 pending (67% complete)
-    { idx:5, approver:'Jamie Rivera', role:'BE - HR - EMPLOYEE DATA', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'admin.one@attest.local' },
-    { idx:6, approver:'Jamie Rivera', role:'BE - HR - PAYROLL PROCESSING', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:4, email:'admin.one@attest.local' },
+    // Jamie Rivera — 2 of 3 reviewed, 1 pending (67% complete) — approver.two@attest.local
+    { idx:5, approver:'Jamie Rivera', role:'BE - HR - EMPLOYEE DATA', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'approver.two@attest.local' },
+    { idx:6, approver:'Jamie Rivera', role:'BE - HR - PAYROLL PROCESSING', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:4, email:'approver.two@attest.local' },
     // BE - PROCUREMENT - VENDOR MANAGEMENT → NOT reviewed (pending)
 
-    // Casey Morrison — all 3 reviewed (100% complete)
-    { idx:7, approver:'Casey Morrison', role:'BE - IT - SYSTEM ADMINISTRATOR', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:6, email:'approver.two@attest.local' },
-    { idx:8, approver:'Casey Morrison', role:'BE - IT - NETWORK ENGINEER', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'approver.two@attest.local' },
-    { idx:9, approver:'Casey Morrison', role:'BE - IT - HELP DESK SUPPORT', action:'Modify Technical Role', ritm:'RITM004812', ritmStatus:'Open', days:6, email:'approver.two@attest.local' },
+    // Casey Morrison — all 3 reviewed (100% complete) — approver.three@attest.local
+    { idx:7, approver:'Casey Morrison', role:'BE - IT - SYSTEM ADMINISTRATOR', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:6, email:'approver.three@attest.local' },
+    { idx:8, approver:'Casey Morrison', role:'BE - IT - NETWORK ENGINEER', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'approver.three@attest.local' },
+    { idx:9, approver:'Casey Morrison', role:'BE - IT - HELP DESK SUPPORT', action:'Modify Technical Role', ritm:'RITM004812', ritmStatus:'Open', days:6, email:'approver.three@attest.local' },
   ];
 
   // Riley Thompson (0/3) and Quinn Harrison (0/2) have no submissions yet — pending
