@@ -407,24 +407,8 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.auth && req.auth.isAdmin) return next();
-  return sendAuthError(req, res, 403);
-}
-
-function requireAdminPage(req, res, next) {
-  const adminPages = [
-    '/admin-users.html', '/activity.html', '/audit-trail.html',
-    '/data-sources.html', '/api-keys.html', '/tenants.html',
-    '/settings.html', '/sod.html', '/evidence.html'
-  ];
-  if (adminPages.includes(req.path)) {
-    return requireAdmin(req, res, next);
-  }
-  return next();
-}
-
-function recordPageAccess(req, res, next) {
+// ---------- Global middleware ----------
+app.use(express.json({ limit: '4mb' }));
   if (req.method === 'GET' && Object.prototype.hasOwnProperty.call(PAGE_ACCESS_LABELS, req.path)) {
     recordActivity({
       type: 'AUTH',
@@ -517,7 +501,6 @@ app.post('/api/auth', async (req, res) => {
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 app.get('/', (req, res) => res.redirect('/dashboard.html'));
 app.use(authMiddleware);
-app.use(requireAdminPage);
 app.use(recordPageAccess);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor/jspdf', express.static(path.join(__dirname, 'node_modules', 'jspdf', 'dist')));
