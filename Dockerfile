@@ -15,13 +15,15 @@ RUN npm ci --omit=dev
 # Force rebuild native module for this architecture
 RUN npm rebuild better-sqlite3
 
-# Copy app source
-# Copy app source (cache bust: v6)
+# Copy app source (before build so we can process HTML)
 COPY server.js ./
 COPY stores ./stores
 COPY public ./public
 COPY data/sources ./data/sources
 COPY scripts ./scripts
+
+# Build: inject sidebar/topbar components into all HTML pages
+RUN npm install xlsx && node scripts/build.js
 
 # Fly.io PORT
 ENV NODE_ENV=production

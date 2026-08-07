@@ -1,50 +1,101 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Onboarding</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Attest — Onboarding</title><link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body class="has-sidebar">
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <aside class="sidebar">
-  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
-  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+    <span class="logo-badge">BETA</span>
+  </div>
+
+  <div class="sidebar-tenant">
+    <select id="tenantSelector">
+      <option value="default">Default Organization</option>
+      
+    </select>
+  </div>
+
   <nav class="sidebar-nav">
-    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
-      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
-      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item " href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item " href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
     </div>
-    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
-      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item " href="/reviews.html"><span class="item-icon">☰</span>My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>
       <a class="sidebar-item active" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
-      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+      <a class="sidebar-item " href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
     </div>
-    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
-      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
-      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
-      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item " href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item " href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>
+      <a class="sidebar-item " href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
     </div>
-    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
-      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
-      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
-      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item " href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item " href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item " href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
     </div>
-    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
-      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
-      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item " href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item " href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
     </div>
   </nav>
+
   <div class="sidebar-footer">
-    <div class="sidebar-user"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>  </div>
-</aside>
-<div class="main">
-  <header class="topbar">
-    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Onboarding</span></div>
-    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search..."></div>
-    <div class="topbar-actions">
-      <select class="lang-select"><option>EN</option><option>ES</option></select>
-      <button class="topbar-btn" title="Dark mode">🌙</button><button class="topbar-btn" title="Notifications">🔔</button><button class="topbar-btn" title="Help">?</button>
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options">
+      <div class="avatar" id="sidebarAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">User</div>
+        <div class="user-role" id="sidebarRole"></div>
+      </div>
     </div>
-  </header>
+  </div>
+</aside>
+
+<div class="main">
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Onboarding</span> Search...  -->
+<header class="topbar">
+  <button class="menu-btn" id="menuToggle" aria-label="Menu">☰</button>
+  <div class="topbar-breadcrumb">Attest › <span>Onboarding</span></div>
+  <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search..."></div>
+  <div class="topbar-actions">
+    <span class="text-sm text-muted" id="lastUpdated"></span>
+    <select class="lang-select" id="langSelect"><option value="EN">EN</option><option value="ES">ES</option></select>
+    <button class="topbar-btn dark-toggle" id="darkToggleTop" title="Toggle dark mode">🌙</button>
+    <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+    <button class="topbar-btn" title="Help">?</button>
+  </div>
+</header>
+
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
+
+
+<div class="main">
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Onboarding</span> Search...  -->
+
+
+<div class="main">
+  
   <div class="content">
     <div class="content-header"><h1>Employee Onboarding — Role Assignment</h1><p>Assign and certify access roles for new employees. Integrates with HR master data for automatic role suggestions.</p></div>
     <div class="card"><div class="card-body no-pad">
@@ -62,8 +113,8 @@
 (function(){
   var el=function(id){return document.getElementById(id);},token=localStorage.getItem('attest_token');
   if(!token){location.href='/login.html';}
-  var origFetch=window.fetch;
-  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+  // Fetch auth inject handled by shared.js
+
   fetch('/api/me').then(r=>r.json()).then(me=>{
     var i=(me.approverName||me.email||'U').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
     el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
@@ -73,5 +124,8 @@
   var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
 })();
 </script>
-<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+<script src="/shared.js"></script><script src="/mobile.js"></script>
+</div>
+</div>
+</body>
 </html>

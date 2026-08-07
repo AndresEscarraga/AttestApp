@@ -1538,6 +1538,15 @@ app.patch('/api/settings', requireAdmin, async (req, res) => {
 
 // ---------- Start server ----------
 async function start() {
+  // Seed demo data on first run (generates Excel files + populates SQLite if empty)
+  try {
+    const { generateExcelFiles, seedDatabase } = require('./scripts/seed-on-first-run');
+    generateExcelFiles();
+    seedDatabase();
+  } catch (err) {
+    console.warn('[seed] Seed on first run failed (non-fatal):', err.message);
+  }
+
   console.log('Loading roles/approvers...');
   try {
     await refreshRoles({ force: true });

@@ -1,0 +1,57 @@
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}} {{tenantOptions}} {{avatarInitial}} {{userName}} {{userRole}} {{campaignBadge}} {{reviewBadge}} {{sodBadge}} -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">A</div>
+    <span class="logo-text">Attest</span>
+    <span class="logo-badge">BETA</span>
+  </div>
+
+  <div class="sidebar-tenant">
+    <select id="tenantSelector">
+      <option value="default">Default Organization</option>
+      {{tenantOptions}}
+    </select>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item {{activePage:dashboard}}" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item {{activePage:campaigns}}" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">{{campaignBadge}}</span></a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item {{activePage:reviews}}" href="/reviews.html"><span class="item-icon">☰</span>My Reviews<span class="item-badge" id="reviewBadge" style="display:none">{{reviewBadge}}</span></a>
+      <a class="sidebar-item {{activePage:onboarding}}" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item {{activePage:offboarding}}" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item {{activePage:audit-trail}}" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item {{activePage:sod}}" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">{{sodBadge}}</span></a>
+      <a class="sidebar-item {{activePage:evidence}}" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item {{activePage:data-sources}}" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item {{activePage:admin-users}}" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item {{activePage:tenants}}" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item {{activePage:settings}}" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item {{activePage:api-keys}}" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options">
+      <div class="avatar" id="sidebarAvatar">{{avatarInitial}}</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">{{userName}}</div>
+        <div class="user-role" id="sidebarRole">{{userRole}}</div>
+      </div>
+    </div>
+  </div>
+</aside>

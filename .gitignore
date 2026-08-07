@@ -3,6 +3,7 @@ node_modules/
 
 # Local runtime persistence and logs.
 data/
+Reports/
 *.log
 
 # Local environment and editor files.
