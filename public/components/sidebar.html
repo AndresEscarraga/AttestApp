@@ -52,6 +52,32 @@
         <div class="user-name" id="sidebarName">{{userName}}</div>
         <div class="user-role" id="sidebarRole">{{userRole}}</div>
       </div>
+      <svg class="user-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="user-menu hidden" id="userMenu">
+      <div class="user-menu-header">
+        <div class="avatar avatar-lg" id="menuAvatar">{{avatarInitial}}</div>
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="menuName">{{userName}}</div>
+          <div class="user-menu-email" id="menuEmail"></div>
+          <div class="user-menu-role" id="menuRole">{{userRole}}</div>
+        </div>
+      </div>
+      <div class="user-menu-divider"></div>
+      <button class="user-menu-item" id="menuThemeToggle">
+        <span class="umi-icon">🎨</span>
+        <span class="umi-label">Appearance</span>
+        <span class="umi-value" id="menuThemeLabel">System</span>
+      </button>
+      <button class="user-menu-item" onclick="location.href='/settings.html'">
+        <span class="umi-icon">⚙</span>
+        <span class="umi-label">Settings</span>
+      </button>
+      <div class="user-menu-divider"></div>
+      <button class="user-menu-item user-menu-signout" id="menuSignOut">
+        <span class="umi-icon">🚪</span>
+        <span class="umi-label">Sign out</span>
+      </button>
     </div>
   </div>
 </aside>

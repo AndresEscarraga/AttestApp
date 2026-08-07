@@ -29,15 +29,46 @@
     localStorage.setItem('attest_theme',isDark?'light':'dark');
     var btns=document.querySelectorAll('.dark-toggle,.topbar-btn[id*="darkToggle"]');
     for(var i=0;i<btns.length;i++)btns[i].textContent=isDark?'🌙':'☀️';
+    // Update theme label in user menu
+    var tl=document.getElementById('menuThemeLabel');
+    if(tl)tl.textContent=isDark?'Light':'Dark';
   }
   document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.shiftKey&&e.key==='D'){e.preventDefault();toggleDark();}});
 
-  // ── Sign out: click sidebar user area ──
+  // ── User menu: toggle dropdown on click ──
+  var userMenuOpen = false;
   document.addEventListener('click',function(e){
     var userArea=e.target.closest('#sidebarUserArea,.sidebar-user');
-    if(userArea&&confirm('Sign out?')){
-      localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');
+    var menuItem=e.target.closest('#userMenu');
+    var menu = document.getElementById('userMenu');
+
+    if(userArea && !menuItem){
+      // Toggle menu
+      userMenuOpen = !userMenuOpen;
+      if(menu) menu.classList.toggle('hidden', !userMenuOpen);
+      if(userArea) userArea.classList.toggle('open', userMenuOpen);
+    } else if(!menuItem){
+      // Close menu if clicking outside
+      userMenuOpen = false;
+      if(menu) menu.classList.add('hidden');
+      var ua = document.getElementById('sidebarUserArea');
+      if(ua) ua.classList.remove('open');
+    }
+  });
+
+  // Sign out button
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#menuSignOut')){
+      localStorage.removeItem('attest_token');
+      localStorage.removeItem('attest_user');
       location.href='/login.html';
+    }
+  });
+
+  // Theme toggle from user menu
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#menuThemeToggle')){
+      toggleDark();
     }
   });
 
@@ -53,6 +84,23 @@
       if(av)av.textContent=initials;
       if(nm)nm.textContent=me.approverName||me.email||'User';
       if(rl)rl.textContent=me.isAdmin?'Administrator':'Approver';
+
+      // Populate user menu dropdown
+      var mav=document.getElementById('menuAvatar');
+      var mname=document.getElementById('menuName');
+      var memail=document.getElementById('menuEmail');
+      var mrole=document.getElementById('menuRole');
+      if(mav)mav.textContent=initials;
+      if(mname)mname.textContent=me.approverName||me.email||'User';
+      if(memail)memail.textContent=me.email;
+      if(mrole)mrole.textContent=me.isAdmin?'Administrator':'Approver';
+
+      // Theme label in menu
+      var themeLabel=document.getElementById('menuThemeLabel');
+      if(themeLabel){
+        var curTheme=document.documentElement.getAttribute('data-theme');
+        themeLabel.textContent=curTheme==='dark'?'Dark':'Light';
+      }
 
       // Tenant selector
       if(me.tenants&&me.tenants.length>1){
