@@ -370,7 +370,13 @@ async function buildAuthContext(req) {
 }
 
 function isPublicPath(path) {
-  return path === '/healthz' || path === '/login.html' || path === '/dashboard.html' || path === '/reviews.html' || path === '/campaigns.html' || path === '/audit-trail.html' || path === '/data-sources.html' || path === '/sod.html' || path === '/evidence.html' || path === '/tenants.html' || path === '/settings.html' || path === '/api-keys.html' || path === '/onboarding.html' || path === '/offboarding.html' || path === '/admin.html' || path === '/index.html' || path === '/api/auth' || path.startsWith('/assets/') || path.startsWith('/api/evidence/share/');
+  // Static assets and public pages — no auth required
+  if (path === '/healthz' || path === '/login.html' || path === '/api/auth' || path.startsWith('/assets/') || path.startsWith('/api/evidence/share/') || path.startsWith('/vendor/')) return true;
+  // All static files (CSS, JS, SVG, JSON, fonts)
+  if (/\.(css|js|svg|png|jpg|jpeg|gif|ico|woff2?|ttf|eot|json|map)$/i.test(path)) return true;
+  // All HTML pages
+  if (path.endsWith('.html')) return true;
+  return false;
 }
 
 async function authMiddleware(req, res, next) {
