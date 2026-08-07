@@ -60,6 +60,27 @@ class SqliteAdminUserStore {
     return normalized;
   }
 
+  async setPassword(email, plainPassword) {
+    const normalized = normalizeEmail(email);
+    const bcrypt = require('bcrypt');
+    const BCRYPT_ROUNDS = 10;
+    const hash = await bcrypt.hash(plainPassword, BCRYPT_ROUNDS);
+    this.db.prepare('UPDATE admin_users SET password_hash = ? WHERE email = ?').run(hash, normalized);
+    return true;
+  }
+
+  async verifyPassword(email, plainPassword) {
+    const normalized = normalizeEmail(email);
+    const row = this.db.prepare('SELECT password_hash FROM admin_users WHERE email = ?').get(normalized);
+    if (!row || !row.password_hash) {
+      // Fallback for legacy users: accept 'admin' if no hash set
+      return plainPassword === 'admin';
+    }
+    const bcrypt = require('bcrypt');
+    return bcrypt.compare(plainPassword, row.password_hash);
+  }
+  }
+
   async removeAdmin(email) {
     const normalized = normalizeEmail(email);
     if (PROTECTED_ADMIN_EMAILS.includes(normalized)) {

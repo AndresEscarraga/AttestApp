@@ -184,6 +184,14 @@ function getDb() {
     }
   }
 
+  // Safe migration: add password_hash to admin_users
+  try {
+    db.exec("ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''");
+    console.log('[db] Added password_hash column to admin_users.');
+  } catch (e) {
+    // Column already exists — ignore
+  }
+
   // Create tenant indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_submissions_tenant ON submissions(tenant_id);

@@ -3,7 +3,7 @@
 > **Versión:** 1.0 · 2026-08-07
 > **Norte de producto:** [`docs/mockup-futuro.html`](mockup-futuro.html) — 13 páginas, dark mode, i18n, multi-tenant
 > **Landing de ventas:** [`docs/landing-page.html`](landing-page.html)
-> **MVP actual:** `https://roledict.fly.dev` — backend completo, UI básica con sidebar
+> **MVP actual:** `https://attestapp.fly.dev` — backend completo, UI completa con sidebar
 >
 > ⚠️ Este documento reemplaza al `Plan-Mejora-RoleDictionaryApp.md` original (archivado como referencia histórica de la migración desde GCP).
 

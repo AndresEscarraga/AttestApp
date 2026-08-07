@@ -4,7 +4,10 @@ npm-debug.log
 .gitignore
 .vscode
 .idea
-data
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/evidence
 test-e2e.js
 *.md
 docs

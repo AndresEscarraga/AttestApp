@@ -7,7 +7,7 @@ WORKDIR /app
 # SQLite build dependencies for better-sqlite3 on Alpine
 RUN apk add --no-cache build-base python3
 
-RUN mkdir -p data Reports && chown node:node data Reports
+RUN mkdir -p data/sources data/evidence && chown node:node data data/sources data/evidence
 
 # Install dependencies first (better layer caching)
 COPY package*.json ./
@@ -16,17 +16,18 @@ RUN npm ci --omit=dev
 RUN npm rebuild better-sqlite3
 
 # Copy app source
-# Copy app source (cache bust: v4)
-COPY server.js logStore.js adminUserStore.js activityStore.js dataStore.js fileSafety.js db.js ./
+# Copy app source (cache bust: v5)
+COPY server.js ./
+COPY stores ./stores
 COPY public ./public
-COPY Reports ./Reports
+COPY data/sources ./data/sources
 COPY scripts ./scripts
 
 # Fly.io PORT
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATA_STORE=local
-ENV REPORTS_DIR=/app/Reports
+ENV REPORTS_DIR=/app/data/sources
 ENV DB_PATH=/app/data/attest.db
 
 EXPOSE 3000
