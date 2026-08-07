@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Evidence Locker</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item active" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Evidence Locker</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" title="Dark mode">🌙</button><button class="topbar-btn" title="Notifications">🔔</button><button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="content-header flex-between">
+      <div><h1>Evidence Locker</h1><p>Tamper-proof archive of certification data, audit logs, and compliance artifacts for external auditor access.</p></div>
+      <button class="btn btn-primary" id="generateBtn">Generate Audit Package</button>
+    </div>
+    <div class="card"><div class="card-body no-pad">
+      <table class="data-table"><thead><tr><th>Package</th><th>Campaign</th><th>Generated</th><th>Format</th><th>Size</th><th>Auditor Access</th><th></th></tr></thead>
+        <tbody id="evidenceBody"><tr><td colspan="7" class="text-sm text-muted" style="text-align:center;padding:30px">Loading packages…</td></tr></tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="generateModal">
+  <div class="modal"><div class="modal-header"><h3>Generate Audit Package</h3><button class="modal-close" id="modalClose">✕</button></div>
+    <div class="modal-body" style="display:grid;gap:14px">
+      <div class="modal-error" id="modalError"></div>
+      <div><label class="form-label">Package Name</label><input class="form-input" id="pkgName" value=""></div>
+      <div><label class="form-label">Campaign (optional)</label><select class="form-select" id="pkgCampaign"><option value="">All submissions</option></select></div>
+      <div><label class="form-label">Description</label><textarea class="form-textarea" id="pkgDescription" rows="2" placeholder="Notes for the auditor..."></textarea></div>
+      <div class="text-sm text-muted">Package includes summary, submissions CSV, activity log, campaign info, and manifest.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modalCancel">Cancel</button><button class="btn btn-primary" id="modalGenerate">Generate Package</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var el=function(id){return document.getElementById(id);},state={packages:[]};
+  var token=localStorage.getItem('attest_token');if(!token){location.href='/login.html';}
+  var origFetch=window.fetch;
+  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
+  function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB';}
+
+  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
+    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
+    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
+    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
+  }).catch(function(){});
+
+  function loadPackages(){
+    fetch('/api/evidence').then(function(r){return r.json();}).then(function(data){state.packages=data;render();});
+    fetch('/api/campaigns').then(function(r){return r.json();}).then(function(camps){var sel=el('pkgCampaign');camps.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});});
+  }
+  function render(){
+    var tbody=el('evidenceBody');
+    if(!state.packages.length){tbody.innerHTML='<tr><td colspan="7" class="text-sm text-muted" style="text-align:center;padding:30px">No evidence packages yet. Generate one to share with auditors.</td></tr>';return;}
+    var html='';
+    state.packages.forEach(function(p){
+      html+='<tr><td>📄 <strong>'+esc(p.name)+'.zip</strong></td>'+
+        '<td>'+(p.campaign_id||'All')+'</td><td>'+fmtDate(p.generated_at)+'</td>'+
+        '<td>ZIP (CSV + TXT)</td><td>'+fmtSize(p.file_size)+'</td>'+
+        '<td>'+(p.share_token?'<span class="badge badge-success">Shared</span>':'<span class="badge badge-neutral">Internal only</span>')+'</td>'+
+        '<td><div class="btn-group">'+
+          '<a class="btn btn-ghost btn-sm" href="/api/evidence/'+p.id+'/download">Download</a>'+
+          (p.share_token?'':'<button class="btn btn-ghost btn-sm share-btn" data-id="'+p.id+'">Share</button>')+
+          '<button class="btn btn-ghost btn-sm del-btn" data-id="'+p.id+'" style="color:var(--danger)">Delete</button>'+
+        '</div></td></tr>';
+    });
+    tbody.innerHTML=html;
+    tbody.querySelectorAll('.share-btn').forEach(function(b){b.addEventListener('click',function(){sharePackage(b.dataset.id);});});
+    tbody.querySelectorAll('.del-btn').forEach(function(b){b.addEventListener('click',function(){if(!confirm('Delete package?'))return;fetch('/api/evidence/'+b.dataset.id,{method:'DELETE'}).then(loadPackages);});});
+  }
+  async function sharePackage(id){
+    var r=await fetch('/api/evidence/'+id+'/share',{method:'POST'});var d=await r.json();
+    alert('Share link (valid 7 days):\n'+window.location.origin+d.shareUrl);
+  }
+  function openModal(){el('generateModal').classList.remove('hidden');el('modalError').textContent='';el('pkgName').value='Evidence_Package_'+new Date().toISOString().slice(0,10);}
+  function closeModal(){el('generateModal').classList.add('hidden');}
+  el('generateBtn').addEventListener('click',openModal);
+  el('modalClose').addEventListener('click',closeModal);el('modalCancel').addEventListener('click',closeModal);
+  el('modalGenerate').addEventListener('click',function(){
+    var btn=el('modalGenerate');btn.disabled=true;btn.textContent='Generating...';
+    fetch('/api/evidence/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:el('pkgName').value||'Package',campaignId:el('pkgCampaign').value,description:el('pkgDescription').value})})
+    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadPackages();})
+    .catch(function(e){el('modalError').textContent=e.message;})
+    .finally(function(){btn.disabled=false;btn.textContent='Generate Package';});
+  });
+  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
+  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+  loadPackages();
+})();
+</script>
+<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+</html>

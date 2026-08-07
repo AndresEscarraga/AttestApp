@@ -55,6 +55,33 @@
     const roles = await res.json().catch(() => []);
     if (!res.ok) throw new Error(roles.error || 'Could not load roles.');
     state.approver = name; state.approverRoles = Array.isArray(roles) ? roles : []; state.impersonated = !!imp;
+    // Load SoD conflicts for this approver
+    loadSodConflicts(name);
+  }
+
+  var conflictedRoles = {}; // roleName -> true if conflicted
+  async function loadSodConflicts(approverName) {
+    try {
+      var res = await fetch('/api/sod/conflicts?approver_name=' + encodeURIComponent(approverName) + '&status=open');
+      var conflicts = await res.json();
+      conflictedRoles = {};
+      conflicts.forEach(function(c) {
+        conflictedRoles[c.role_a] = true;
+        conflictedRoles[c.role_b] = true;
+      });
+      // Re-render rows if already loaded
+      var rows = document.querySelectorAll('#reviewTableBody tr');
+      rows.forEach(function(tr) {
+        var roleName = tr.dataset.roleName;
+        if (conflictedRoles[roleName]) {
+          tr.style.background = '#FEF2F2';
+          var statusCell = tr.querySelector('td:nth-child(4)');
+          if (statusCell) statusCell.innerHTML = '<span class="badge badge-danger">Flagged — SoD</span>';
+          var sel = tr.querySelector('select');
+          if (sel) { sel.value = 'Reject Business Role'; sel.style.background = '#FEF2F2'; sel.style.borderColor = '#FECACA'; }
+        }
+      });
+    } catch(e) {}
   }
 
   function updateSidebar() {
@@ -67,12 +94,30 @@
     signedInName.textContent = 'Signed in as: ' + label;
   }
 
-  // Dark mode
-  const dt = darkToggle;
-  if (dt) dt.addEventListener('click', function() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    dt.textContent = isDark ? '\u{1F319} Dark Mode' : '\u{2600}\u{FE0F} Light Mode';
+  // Dark mode (topbar button darkToggle2)
+  const dt = document.getElementById('darkToggle2');
+  if (dt) {
+    var saved = localStorage.getItem('attest_theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      dt.textContent = '☀️';
+    }
+    dt.addEventListener('click', function() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      dt.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('attest_theme', isDark ? 'light' : 'dark');
+    });
+  }
+
+  // Sign out (click sidebar user area)
+  var sb = document.getElementById('sidebarUserArea');
+  if (sb) sb.addEventListener('click', function() {
+    if (confirm('Sign out?')) {
+      localStorage.removeItem('attest_token');
+      localStorage.removeItem('attest_user');
+      location.href = '/login.html';
+    }
   });
 
   loadCurrentUser();
@@ -95,57 +140,98 @@
     tr.dataset.rejected = 'false';
     tr.dataset.confirmedAction = '';
 
-    const tdNum = document.createElement('td'); tdNum.textContent = state.rowSeq; tr.appendChild(tdNum);
+    // Extract system from role name: "BE - SYSTEM - ..."
+    var roleParts = roleName.split(' - ');
+    var system = roleParts.length >= 2 ? roleParts[1] : '—';
 
+    // Business Role
     const tdRole = document.createElement('td');
-    const roleSpan = document.createElement('span'); roleSpan.className = 'role-name-cell'; roleSpan.textContent = roleName;
+    const roleSpan = document.createElement('span'); roleSpan.className = 'role-name-cell';
+    roleSpan.innerHTML = '<strong>' + escHtml(roleName) + '</strong>';
     tdRole.appendChild(roleSpan); tr.appendChild(tdRole);
 
-    const tdApp = document.createElement('td');
-    const appSpan = document.createElement('span'); appSpan.className = 'approver-cell'; appSpan.textContent = state.approver;
-    tdApp.appendChild(appSpan); tr.appendChild(tdApp);
+    // System
+    const tdSys = document.createElement('td');
+    tdSys.textContent = system; tdSys.style.fontSize = '12px';
+    tr.appendChild(tdSys);
 
+    // Technical Roles (loaded async)
+    const tdTech = document.createElement('td');
+    tdTech.className = 'text-sm text-muted';
+    tdTech.textContent = 'Loading...';
+    tdTech.style.fontSize = '11px';
+    tr.appendChild(tdTech);
+
+    // Load technical roles from transactions
+    fetch('/api/transactions?role=' + encodeURIComponent(roleName)).then(function(r){return r.json();}).then(function(data){
+      var techRoles = [];
+      if (data.rows && data.rows.length) {
+        // Get unique technical roles from column index 1 or 2
+        var techCol = data.header.indexOf('Technical Role');
+        if (techCol < 0) techCol = 2;
+        var seen = {};
+        data.rows.forEach(function(row){
+          var trName = String(row[techCol] || '').trim();
+          if (trName && !seen[trName]) { seen[trName] = true; techRoles.push(trName); }
+        });
+      }
+      tdTech.textContent = techRoles.length ? techRoles.slice(0,3).join(', ') + (techRoles.length > 3 ? ' (+' + (techRoles.length-3) + ')' : '') : '—';
+      if (techRoles.length >= 3) tdTech.title = techRoles.join(', ');
+      // Update View Permissions button with T-code count
+      txBtn.textContent = techRoles.length ? 'View ' + techRoles.length + ' T-codes →' : 'View Permissions →';
+    }).catch(function(){ tdTech.textContent = '—'; });
+
+    // Status
+    const tdStatus = document.createElement('td');
+    tdStatus.innerHTML = '<span class="badge badge-warning">Pending</span>';
+    tr.appendChild(tdStatus);
+
+    // Action dropdown
     const tdAct = document.createElement('td');
     const sel = document.createElement('select');
-    sel.style.cssText = 'font-size:11px;padding:4px 6px;border:1px solid #CBD5E1;border-radius:4px;font-family:inherit;min-width:160px';
+    sel.style.cssText = 'font-size:11px;padding:4px 8px;border:1px solid #E2E8F0;border-radius:4px;font-family:inherit';
     sel.appendChild(opt('', 'Select action...'));
     ACTIONS.forEach(function(a){sel.appendChild(opt(a,a))});
-    sel.addEventListener('change', function(){onActionChange(tr, sel.value)});
+    sel.addEventListener('change', function(){onActionChange(tr, sel.value, tdStatus)});
     tdAct.appendChild(sel); tr.appendChild(tdAct);
 
-    const tdDet = document.createElement('td');
-    const detInput = document.createElement('textarea');
-    detInput.rows = 2;
-    detInput.style.cssText = 'width:100%;font:inherit;padding:4px 6px;border:1px solid #CBD5E1;border-radius:3px;resize:vertical;min-height:28px;min-width:280px';
-    detInput.placeholder = 'Details for Modify/Reject';
-    detInput.readOnly = true;
-    tdDet.appendChild(detInput); tr.appendChild(tdDet);
-
+    // View Permissions
     const tdTx = document.createElement('td');
     const txBtn = document.createElement('button');
-    txBtn.className = 'btn-tx'; txBtn.textContent = 'View Permissions';
+    txBtn.className = 'btn btn-ghost btn-xs'; txBtn.textContent = 'View Permissions →';
     txBtn.addEventListener('click', function(){openTxModal(roleName, txBtn)});
     tdTx.appendChild(txBtn); tr.appendChild(tdTx);
 
     reviewTableBody.appendChild(tr);
+
+    // SoD flagging
+    if (conflictedRoles[roleName]) {
+      tr.style.background = '#FEF2F2';
+      tdStatus.innerHTML = '<span class="badge badge-danger">Flagged — SoD</span>';
+      sel.value = 'Reject Business Role';
+      sel.style.background = '#FEF2F2'; sel.style.borderColor = '#FECACA';
+      tr.dataset.rejected = 'true';
+    }
+
     updateStats();
     return tr;
   }
 
   function opt(value, text) { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; }
 
-  function onActionChange(tr, action) {
-    const detInput = tr.querySelector('textarea');
-    const isReject = action === REJECT;
+  function onActionChange(tr, action, tdStatus) {
+    var isReject = action === REJECT;
     tr.dataset.rejected = String(isReject);
     tr.classList.toggle('rejected-row', isReject);
     if (action === KEEP) {
-      detInput.readOnly = true; detInput.value = ''; tr.dataset.confirmedAction = KEEP;
+      tr.dataset.confirmedAction = KEEP;
+      if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-success">Keep</span>';
     } else if (action) {
-      detInput.readOnly = false; tr.dataset.confirmedAction = '';
-      if (!detInput.value) openActionModal(tr, '');
+      tr.dataset.confirmedAction = '';
+      if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-info">' + escHtml(action) + '</span>';
     } else {
-      detInput.readOnly = true; detInput.value = ''; tr.dataset.confirmedAction = '';
+      tr.dataset.confirmedAction = '';
+      if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-warning">Pending</span>';
     }
     updateStats();
   }
@@ -235,16 +321,42 @@
 
   // Stats
   function updateStats() {
-    const rows = Array.from(document.querySelectorAll('#reviewTableBody tr'));
-    const total=rows.length, ack=rows.filter(function(r){return r.dataset.txAcknowledged==='true'}).length;
-    const acted=rows.filter(function(r){return r.dataset.confirmedAction}).length;
-    const rej=rows.filter(function(r){return r.dataset.rejected==='true'}).length;
-    reviewStats.innerHTML =
-      '<div class=stat-card><div class=stat-label>Total Roles</div><div class=stat-value>'+total+'</div></div>'+
-      '<div class=stat-card><div class=stat-label>Acknowledged</div><div class=stat-value>'+ack+'</div><div class="stat-change '+(ack===total?'up':'')+'">'+(ack===total?'All done':(total-ack)+' pending')+'</div></div>'+
-      '<div class=stat-card><div class=stat-label>Actions Ready</div><div class=stat-value>'+acted+'</div><div class=stat-change>'+(total-acted)+' remaining</div></div>'+
-      '<div class=stat-card><div class=stat-label>Rejected</div><div class=stat-value style=color:'+(rej>0?'var(--danger)':'inherit')+'>'+rej+'</div></div>';
+    var rows = Array.from(document.querySelectorAll('#reviewTableBody tr'));
+    var total = rows.length;
+    var ack = rows.filter(function(r){return r.dataset.txAcknowledged==='true';}).length;
+    var acted = rows.filter(function(r){return r.dataset.confirmedAction;}).length;
+    var rej = rows.filter(function(r){return r.dataset.rejected==='true';}).length;
+    var pending = total - acted;
+
+    var sa = document.getElementById('statAssigned'), sr = document.getElementById('statReviewed');
+    var sp = document.getElementById('statPending'), sj = document.getElementById('statRejected');
+    if (sa) sa.textContent = total;
+    if (sr) sr.textContent = acted;
+    if (sp) sp.textContent = pending;
+    if (sj) sj.textContent = rej;
+
+    // Update sidebar badge
+    var badge = document.getElementById('reviewBadge');
+    if (badge && pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+    else if (badge) { badge.style.display = 'none'; }
+
+    // Update submit warning
+    var warn = document.getElementById('submitWarning');
+    if (warn) warn.textContent = ack === total ? 'All permissions acknowledged. Ready to submit.' : (total - ack) + ' of ' + total + ' roles need permission review.';
   }
 
   function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  // Tenant selector
+  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
+    var sel = document.getElementById('tenantSelector');
+    if (sel && me.tenants && me.tenants.length > 1) {
+      sel.innerHTML = '';
+      me.tenants.forEach(function(t){
+        var o = document.createElement('option'); o.value = t.id;
+        o.textContent = t.name; if (t.id === me.tenantId) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+  }).catch(function(){});
 })();

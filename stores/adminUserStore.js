@@ -46,15 +46,17 @@ class SqliteAdminUserStore {
     seedMany(DEFAULT_ADMIN_EMAILS);
   }
 
-  async listAdmins() {
-    const rows = this.db.prepare('SELECT email FROM admin_users ORDER BY email').all();
+  async listAdmins(tenantId) {
+    const tid = tenantId || 'default';
+    const rows = this.db.prepare('SELECT email FROM admin_users WHERE tenant_id = ? ORDER BY email').all(tid);
     return rows.map(r => r.email);
   }
 
-  async addAdmin(email) {
+  async addAdmin(email, tenantId) {
+    const tid = tenantId || 'default';
     const normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) throw new Error('Invalid email');
-    this.db.prepare('INSERT OR IGNORE INTO admin_users (email, protected) VALUES (?, 0)').run(normalized);
+    this.db.prepare('INSERT OR IGNORE INTO admin_users (email, tenant_id, protected) VALUES (?, ?, 0)').run(normalized, tid);
     return normalized;
   }
 

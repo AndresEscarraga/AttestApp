@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Offboarding</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item active" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Offboarding</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" title="Dark mode">🌙</button><button class="topbar-btn" title="Notifications">🔔</button><button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="content-header"><h1>Employee Offboarding — Access Revocation</h1><p>Review and revoke system access for departing employees. Triggered automatically by HR termination events.</p></div>
+    <div class="card"><div class="card-body no-pad">
+      <table class="data-table"><thead><tr><th>Employee</th><th>Department</th><th>Last Day</th><th>Active Roles</th><th>Privileged Access</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr style="background:#FEF2F2"><td><strong>Alex Kim</strong></td><td>IT Infrastructure</td><td>Aug 20, 2026</td><td>8 roles</td><td><span class="badge badge-danger">4 elevated</span></td><td><span class="badge badge-danger">Urgent — 13d left</span></td><td><button class="btn btn-danger btn-sm">Revoke All</button></td></tr>
+          <tr><td><strong>Sandra Mills</strong></td><td>Procurement</td><td>Aug 31, 2026</td><td>3 roles</td><td><span class="badge badge-neutral">None</span></td><td><span class="badge badge-warning">Pending — 24d left</span></td><td><button class="btn btn-secondary btn-sm">Review</button></td></tr>
+          <tr><td><strong>David Park</strong></td><td>Sales</td><td>Aug 5, 2026</td><td>4 roles</td><td><span class="badge badge-neutral">None</span></td><td><span class="badge badge-success">Revoked — Aug 6</span></td><td><button class="btn btn-ghost btn-sm">View Log</button></td></tr>
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+<script>
+(function(){
+  var el=function(id){return document.getElementById(id);},token=localStorage.getItem('attest_token');
+  if(!token){location.href='/login.html';}
+  var origFetch=window.fetch;
+  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+  fetch('/api/me').then(r=>r.json()).then(me=>{
+    var i=(me.approverName||me.email||'U').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
+    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
+  });
+  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
+  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+})();
+</script>
+<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+</html>

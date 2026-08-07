@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Data Sources</title><link rel="stylesheet" href="styles.css">
+<style>
+  .review-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media(max-width:900px){ .review-grid{grid-template-columns:1fr;} }
+  .dropzone { border:2px dashed #CBD5E1; border-radius:var(--radius-lg); padding:32px; text-align:center; cursor:pointer; transition:all .15s; background:var(--bg-root); }
+  .dropzone:hover, .dropzone.drag-over { border-color:var(--accent); background:var(--accent-light); }
+  .dropzone .dz-icon { font-size:28px; margin-bottom:8px; }
+  .dropzone .dz-text { font-size:13px; color:var(--text-secondary); }
+  .dropzone .dz-hint { font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+  [data-theme="dark"] .dropzone { background:#0F172A; border-color:var(--border); }
+  [data-theme="dark"] .dropzone:hover { background:var(--accent-light); }
+  .upload-status { font-size:12px; min-height:18px; margin-top:8px; }
+  .upload-success { color:var(--success); font-weight:600; }
+  .upload-error { color:var(--danger); font-weight:600; }
+  .upload-pending { color:var(--warning); font-weight:600; }
+</style>
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item active" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Data Sources</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" title="Dark mode">🌙</button><button class="topbar-btn" title="Notifications">🔔</button><button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="content-header"><h1>Data Sources</h1><p>Upload Excel files with roles, approvers, and transaction permissions. Drag & drop supported.</p></div>
+    <div class="review-grid">
+      <div><div class="card">
+        <div class="card-header flex-between"><h2>Roles & Approvers</h2><span class="badge badge-teal" id="rolesBadge">Last upload: —</span></div>
+        <div class="card-body">
+          <div class="dropzone" id="rolesDrop">
+            <div class="dz-icon">📊</div>
+            <div class="dz-text"><strong>Drop Roles Approvers.xlsx here</strong></div>
+            <div class="dz-hint">or click to browse · .xlsx up to 5 MB</div>
+            <input type="file" id="rolesFileInput" accept=".xlsx" style="display:none">
+          </div>
+          <div class="upload-status" id="rolesUploadStatus"></div>
+          <div class="mt-12 text-sm text-muted" id="rolesInfo">Loading file info...</div>
+        </div>
+      </div></div>
+      <div><div class="card">
+        <div class="card-header flex-between"><h2>Transactions & Permissions</h2><span class="badge badge-teal" id="txBadge">Last upload: —</span></div>
+        <div class="card-body">
+          <div class="dropzone" id="txDrop">
+            <div class="dz-icon">📋</div>
+            <div class="dz-text"><strong>Drop Transactions.xlsx here</strong></div>
+            <div class="dz-hint">or click to browse · .xlsx up to 5 MB</div>
+            <input type="file" id="txFileInput" accept=".xlsx" style="display:none">
+          </div>
+          <div class="upload-status" id="txUploadStatus"></div>
+          <div class="mt-12 text-sm text-muted" id="txInfo">Loading file info...</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var el=function(id){return document.getElementById(id);},token=localStorage.getItem('attest_token');
+  if(!token){location.href='/login.html';}
+  var origFetch=window.fetch;
+  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+
+  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
+    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
+    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
+    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
+  }).catch(function(){});
+
+  function loadDataStatus(){
+    fetch('/api/admin/data-status').then(function(r){return r.json();}).then(function(data){
+      if(data.roles.file){el('rolesBadge').textContent='Last upload: '+new Date(data.roles.file.modified).toLocaleDateString();el('rolesInfo').textContent=data.roles.total+' roles · '+data.roles.approvers+' approvers';}
+      if(data.transactions.file){el('txBadge').textContent='Last upload: '+new Date(data.transactions.file.modified).toLocaleDateString();el('txInfo').textContent=data.transactions.totalRows+' rows · '+data.transactions.rolesWithData+' role groups';}
+    }).catch(function(){});
+  }
+
+  function setupDrop(dropId,inputId,statusId,endpoint,reloadFn){
+    var drop=el(dropId),input=el(inputId),status=el(statusId);
+    if(!drop||!input)return;
+    input.addEventListener('change',function(){if(input.files[0])uploadFile(input.files[0],endpoint,status,reloadFn);});
+    drop.addEventListener('click',function(){input.click();});
+    ['dragenter','dragover'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('drag-over');});});
+    ['dragleave','drop'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('drag-over');});});
+    drop.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.xlsx'))uploadFile(f,endpoint,status,reloadFn);else status.innerHTML='<span class="upload-error">Only .xlsx files accepted.</span>';});
+  }
+
+  async function uploadFile(file,endpoint,statusEl,reloadFn){
+    statusEl.innerHTML='<span class="upload-pending">Uploading '+file.name+'...</span>';
+    var fd=new FormData();fd.append('file',file);
+    try{var res=await fetch(endpoint,{method:'POST',body:fd});var r=await res.json().catch(function(){return{};});if(!res.ok)throw new Error(r.error||'Upload failed');
+      statusEl.innerHTML='<span class="upload-success">'+r.message+'</span>';loadDataStatus();
+    }catch(e){statusEl.innerHTML='<span class="upload-error">'+e.message+'</span>';}
+  }
+
+  setupDrop('rolesDrop','rolesFileInput','rolesUploadStatus','/api/admin/upload-roles');
+  setupDrop('txDrop','txFileInput','txUploadStatus','/api/admin/upload-transactions');
+  loadDataStatus();
+
+  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
+  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+})();
+</script>
+<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+</html>

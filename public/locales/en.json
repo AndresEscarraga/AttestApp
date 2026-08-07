@@ -1,0 +1,114 @@
+{
+  "app_name": "Attest",
+  "tagline": "Access Certification & Role Governance",
+  "sidebar": {
+    "overview": "Overview",
+    "dashboard": "Dashboard",
+    "campaigns": "Campaigns",
+    "review": "Review",
+    "my_reviews": "My Reviews",
+    "onboarding": "Onboarding",
+    "offboarding": "Offboarding",
+    "audit_compliance": "Audit & Compliance",
+    "audit_trail": "Audit Trail",
+    "sod_conflicts": "SoD Conflicts",
+    "evidence_locker": "Evidence Locker",
+    "administration": "Administration",
+    "data_sources": "Data Sources",
+    "users_roles": "Users & Roles",
+    "tenants": "Tenants",
+    "settings": "Settings",
+    "configuration": "Configuration",
+    "api_keys": "API Keys"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "download": "Download",
+    "share": "Share",
+    "export": "Export",
+    "search": "Search roles, approvers, campaigns...",
+    "dark_mode": "Dark Mode",
+    "light_mode": "Light Mode",
+    "sign_out": "Sign Out",
+    "loading": "Loading...",
+    "no_data": "No data available",
+    "new": "NEW"
+  },
+  "dashboard": {
+    "title": "Good {time}, {name}",
+    "subtitle": "{pct}% of {total} roles certified. {pending} pending reviews.",
+    "total_roles": "Total Roles Under Review",
+    "certification_progress": "Certification Progress",
+    "pending_actions": "Pending Approver Actions",
+    "sod_detected": "SoD Conflicts Detected",
+    "progress_by_system": "Certification Progress by System",
+    "recent_activity": "Recent Activity",
+    "active_campaigns": "Active Campaigns",
+    "new_campaign": "+ New Campaign",
+    "no_campaigns": "No active campaigns"
+  },
+  "campaigns": {
+    "title": "Access Certification Campaigns",
+    "description": "Create and manage periodic access review campaigns for SOX, ITGC, ISO 27001, and internal compliance.",
+    "new_campaign": "+ New Campaign",
+    "table": {
+      "campaign": "Campaign",
+      "framework": "Framework",
+      "period": "Period",
+      "approvers": "Approvers",
+      "roles": "Roles",
+      "progress": "Progress",
+      "status": "Status"
+    }
+  },
+  "reviews": {
+    "title": "My Role Reviews",
+    "description": "Review and certify each business role assigned to you.",
+    "save_draft": "Save Draft",
+    "submit": "Submit Certification",
+    "assigned": "Assigned Roles",
+    "reviewed": "Reviewed",
+    "pending_review": "Pending Review",
+    "rejected": "Rejected",
+    "table": {
+      "business_role": "Business Role",
+      "system": "System",
+      "technical_roles": "Technical Roles",
+      "status": "Status",
+      "action": "Action",
+      "view_permissions": "View Permissions →"
+    }
+  },
+  "audit": {
+    "title": "Audit Trail",
+    "description": "Immutable record of every access certification decision. Filter, export, and present to external auditors.",
+    "export_xlsx": "Export XLSX",
+    "export_csv": "Export CSV",
+    "export_pdf": "Export PDF",
+    "export_evidence": "Export Evidence Package"
+  },
+  "sod": {
+    "title": "Segregation of Duties Conflicts",
+    "description": "Automated SoD rule engine detects conflicting role assignments.",
+    "run_detection": "Run Detection",
+    "new_rule": "+ New Rule",
+    "mitigate": "Mitigate"
+  },
+  "evidence": {
+    "title": "Evidence Locker",
+    "description": "Tamper-proof archive of certification data for external auditor access.",
+    "generate": "Generate Audit Package"
+  },
+  "tenants": {
+    "title": "Organization Tenants",
+    "description": "Manage organizations in your multi-tenant instance."
+  },
+  "settings": {
+    "title": "Configuration",
+    "description": "Global settings, SSO integration, email notifications, and branding."
+  }
+}

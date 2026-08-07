@@ -28,14 +28,18 @@ class SqliteActivityStore {
 
   async record(event) {
     const e = normalizeEvent(event);
+    const tenantId = e.tenantId || 'default';
     this.db.prepare(
-      'INSERT OR REPLACE INTO activity (activity_id, timestamp, type, action, email, detail) VALUES (?,?,?,?,?,?)'
-    ).run(e.activityId, e.timestamp, e.type, e.action, e.email, e.detail);
+      'INSERT OR REPLACE INTO activity (activity_id, tenant_id, timestamp, type, action, email, detail) VALUES (?,?,?,?,?,?,?)'
+    ).run(e.activityId, tenantId, e.timestamp, e.type, e.action, e.email, e.detail);
   }
 
   async readAll(filters = {}) {
     let sql = 'SELECT * FROM activity WHERE 1=1';
     const params = [];
+    const tenantId = filters.tenantId || 'default';
+    sql += ' AND tenant_id = ?';
+    params.push(tenantId);
     if (filters.type) { sql += ' AND type = ?'; params.push(filters.type); }
     if (filters.email) { sql += ' AND email = ?'; params.push(filters.email); }
     sql += ' ORDER BY timestamp DESC';

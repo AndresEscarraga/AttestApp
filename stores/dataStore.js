@@ -46,7 +46,7 @@ class LocalDataStore {
 }
 
 function createDataStore() {
-  const dir = process.env.REPORTS_DIR || path.join(__dirname, 'Reports');
+  const dir = process.env.REPORTS_DIR || path.join(__dirname, '..', 'data', 'sources');
   const allowedNames = [
     process.env.ROLES_FILE_NAME || 'Roles Approvers.xlsx',
     process.env.TX_FILE_NAME || 'Transactions.xlsx',

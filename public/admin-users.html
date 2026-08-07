@@ -7,53 +7,98 @@
 </head>
 <body class="has-sidebar">
 <aside class="sidebar">
-  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span></div>
+  <div class="sidebar-logo"><div class="logo-badge"><span class="logo-icon">A</span><span class="logo-text">Attest</span><span class="logo-beta">BETA</span></div></div>
+
+  <div class="sidebar-tenant">
+    <select id="tenantSelector">
+      <option value="default">Default Organization</option>
+    </select>
+  </div>
+
   <nav class="sidebar-nav">
     <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
-      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
     </div>
-    <div class="sidebar-section"><div class="sidebar-section-label">Admin</div>
-      <a class="sidebar-item" href="/admin.html"><span class="item-icon">☷</span>Audit Trail</a>
-      <a class="sidebar-item" href="/activity.html"><span class="item-icon">📋</span>Activity Log</a>
-      <a class="sidebar-item active"><span class="item-icon">👥</span>Admin Users</a>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item active" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
     </div>
   </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options">
+      <div class="avatar" id="sidebarAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">User</div>
+        <div class="user-role" id="sidebarRole"></div>
+      </div>
+    </div>
+  </div>
 </aside>
+
 <div class="main">
-  <header class="topbar"><div class="topbar-breadcrumb">Attest › <span>Admin Users</span></div></header>
-  <div class="content">
-    <div class="content-header"><h1>Admin Users</h1><p>Manage the email addresses allowed to access admin-only tools.
-      Technical Support admins are protected and cannot be removed.
-    </p>
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Users & Roles</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search roles, approvers, campaigns..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn dark-toggle" title="Toggle dark mode">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
   </header>
 
-  <main>
-    <section class="admin-toolbar">
-      <form id="adminUserForm" class="admin-user-form">
-        <label>Admin email
-          <input id="adminEmailInput" type="email" placeholder="admin@example.com" required />
-        </label>
-        <button class="btn-primary" type="submit">Add admin</button>
-      </form>
-      <p class="modal-error" id="adminUserError"></p>
-    </section>
-
-    <div class="table-scroll">
-      <table id="adminUsersTable" class="log-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Type</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="adminUsersBody"></tbody>
-      </table>
+  <div class="content">
+    <div class="content-header">
+      <h1>Admin Users</h1>
+      <p>Manage the email addresses allowed to access admin-only tools. Technical Support admins are protected and cannot be removed.</p>
     </div>
-    <p class="muted" id="adminUsersEmpty" hidden>No admin users found.</p>
+
+    <div class="card mb-16">
+      <div class="card-header"><h2>Add Admin User</h2></div>
+      <div class="card-body">
+        <form id="adminUserForm" style="display:flex;gap:8px;align-items:flex-end">
+          <div class="form-group" style="flex:1;margin:0">
+            <label class="form-label">Admin email</label>
+            <input class="form-input" id="adminEmailInput" type="email" placeholder="admin@example.com" required />
+          </div>
+          <button class="btn btn-primary" type="submit">Add admin</button>
+        </form>
+        <p class="text-sm text-danger mt-8" id="adminUserError" style="display:none"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>Registered Admins</h2></div>
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table class="data-table" id="adminUsersTable">
+            <thead><tr><th>Email</th><th>Type</th><th>Action</th></tr></thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
+        <p class="text-sm text-muted" style="padding:16px;display:none" id="adminUsersEmpty">No admin users found.</p>
+      </div>
+    </div>
   </div>
 </div>
 
-  <script src="admin-users.js"></script>
-</body>
+<script src="admin-users.js"></script>
+<script src="/shared.js"></script>
+<script src="/mobile.js"></script></body>
 </html>

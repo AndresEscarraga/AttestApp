@@ -12,54 +12,86 @@
   <div class="sidebar-logo">
     <div class="logo-icon">A</div>
     <span class="logo-text">Attest</span>
+    <span class="logo-badge">BETA</span>
   </div>
+
+  <div class="sidebar-tenant">
+    <select id="tenantSelector">
+      <option value="default">Default Organization</option>
+    </select>
+  </div>
+
   <nav class="sidebar-nav">
     <div class="sidebar-section">
       <div class="sidebar-section-label">Overview</div>
       <a class="sidebar-item active" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Review</div>
-      <a class="sidebar-item" href="/"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Audit & Compliance</div>
-      <a class="sidebar-item" href="/admin.html" id="adminLink"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
     </div>
   </nav>
+
   <div class="sidebar-footer">
-    <div class="sidebar-user">
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options">
       <div class="avatar" id="sidebarAvatar">U</div>
-      <div>
+      <div class="user-info">
         <div class="user-name" id="sidebarName">User</div>
         <div class="user-role" id="sidebarRole"></div>
       </div>
     </div>
-    <button class="btn btn-sm btn-secondary" style="width:100%;margin-top:8px" id="darkToggle">🌙 Dark Mode</button>
-    <button class="btn btn-sm btn-ghost" style="width:100%;margin-top:4px;color:var(--danger)" id="signOutBtn">Sign Out</button>
   </div>
 </aside>
 
 <div class="main">
   <header class="topbar">
     <div class="topbar-breadcrumb">Attest › <span>Dashboard</span></div>
-    <div class="topbar-actions"></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search roles, approvers, campaigns..."></div>
+    <div class="topbar-actions">
+      <span class="text-sm text-muted" id="lastUpdated"></span>
+      <select class="lang-select" style="margin-left:8px"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" id="darkToggleTop" title="Toggle dark mode">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
   </header>
 
   <div class="content">
     <div class="content-header">
       <h1 id="greeting">Good morning</h1>
-      <p id="dashboardSubtitle">Loading your access certification overview...</p>
+      <p id="dashboardSubtitle">Loading your access certification overview…</p>
     </div>
 
+    <!-- KPI Stat Cards -->
     <div class="stats-grid" id="kpiGrid">
-      <div class="stat-card"><div class="stat-label">Total Roles</div><div class="stat-value">—</div></div>
-      <div class="stat-card"><div class="stat-label">Certification Progress</div><div class="stat-value">—</div></div>
-      <div class="stat-card"><div class="stat-label">Pending Reviews</div><div class="stat-value">—</div></div>
-      <div class="stat-card"><div class="stat-label">SoD Conflicts</div><div class="stat-value">—</div></div>
+      <div class="stat-card skeleton"><div class="stat-label">Total Roles</div><div class="stat-value">—</div></div>
+      <div class="stat-card skeleton"><div class="stat-label">Certification Progress</div><div class="stat-value">—</div></div>
+      <div class="stat-card skeleton"><div class="stat-label">Pending Reviews</div><div class="stat-value">—</div></div>
+      <div class="stat-card skeleton"><div class="stat-label">SoD Conflicts</div><div class="stat-value">—</div></div>
     </div>
 
-    <div class="chart-row" style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:24px">
+    <!-- Chart + Activity row -->
+    <div class="chart-row">
       <div class="card">
         <div class="card-header flex-between">
           <h2>Certification Progress by System</h2>
@@ -67,25 +99,26 @@
         </div>
         <div class="card-body" style="min-height:220px">
           <svg viewBox="0 0 600 180" style="width:100%;height:180px" id="chartSvg">
-            <text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">Loading chart...</text>
+            <text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">Loading chart…</text>
           </svg>
         </div>
       </div>
       <div class="card">
         <div class="card-header"><h2>Recent Activity</h2></div>
         <div class="card-body" id="recentActivity" style="padding:12px 16px;min-height:200px">
-          <div class="text-sm text-muted" style="text-align:center;padding:40px 0">Loading...</div>
+          <div class="text-sm text-muted" style="text-align:center;padding:40px 0">Loading…</div>
         </div>
       </div>
     </div>
 
+    <!-- Active Campaigns -->
     <div class="card">
       <div class="card-header flex-between">
         <h2>Active Campaigns</h2>
-        <button class="btn btn-primary btn-sm">+ New Campaign</button>
+        <button class="btn btn-primary btn-sm" id="newCampaignBtn" title="Coming in Phase 2">+ New Campaign</button>
       </div>
       <div class="card-body" id="activeCampaigns">
-        <div class="text-sm text-muted" style="text-align:center;padding:20px">Loading campaigns...</div>
+        <div class="text-sm text-muted" style="text-align:center;padding:20px">Loading campaigns…</div>
       </div>
     </div>
   </div>
@@ -93,10 +126,12 @@
 
 <script>
 (function() {
+  'use strict';
   var el = function(id) { return document.getElementById(id); };
 
-  // JWT token injection
+  // ── JWT token injection ──
   var token = localStorage.getItem('attest_token');
+  if (!token) { location.href = '/login.html'; }
   var origFetch = window.fetch;
   window.fetch = function(url, opts) {
     opts = opts || {}; opts.headers = opts.headers || {};
@@ -104,133 +139,318 @@
     return origFetch(url, opts);
   };
 
-  // Load user info
-  async function loadUser() {
-    try {
-      var res = await fetch('/api/me');
-      var me = await res.json().catch(function() { return {}; });
-      if (!res.ok) throw new Error('Auth failed');
-      var initials = (me.approverName || 'U').split(' ').map(function(n) { return n[0]; }).join('').substring(0,2).toUpperCase();
-      el('sidebarAvatar').textContent = initials;
-      el('sidebarName').textContent = me.approverName || me.email || 'User';
-      el('sidebarRole').textContent = me.isAdmin ? 'Administrator' : 'Approver';
-      el('greeting').textContent = 'Good ' + getTimeOfDay() + ', ' + (me.approverName || 'there');
-      if (me.isAdmin) el('adminLink').style.display = '';
-    } catch(e) {
-      location.href = '/login.html';
-    }
-  }
+  // ── Shared state ──
+  var me = null;
 
+  // ── Helpers ──
+  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch(e) { return iso; } }
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function getTimeOfDay() {
     var h = new Date().getHours();
+    if (h < 5) return 'night';
     if (h < 12) return 'morning';
     if (h < 18) return 'afternoon';
     return 'evening';
   }
 
-  // Load dashboard data
-  async function loadDashboard() {
+  // ── Load user + update sidebar ──
+  async function loadUser() {
     try {
-      var res = await fetch('/api/dashboard/stats');
-      var data = await res.json();
-      if (!res.ok) throw new Error('Failed');
-      el('dashboardSubtitle').textContent = data.progress + '% of ' + data.totalRoles + ' roles certified. ' + data.pendingCount + ' pending review.';
-      el('kpiGrid').innerHTML =
-        '<div class="stat-card"><div class="stat-label">Total Roles</div><div class="stat-value">' + data.totalRoles + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Certified</div><div class="stat-value">' + data.progress + '%</div><div style="margin-top:8px"><div class="progress-bar"><div class="progress-fill progress-fill-teal" style="width:' + data.progress + '%"></div></div></div></div>' +
-        '<div class="stat-card"><div class="stat-label">Pending Reviews</div><div class="stat-value">' + data.pendingCount + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">SoD Conflicts</div><div class="stat-value" style="color:' + (data.sodConflicts > 0 ? 'var(--danger)' : 'var(--success)') + '">' + data.sodConflicts + '</div></div>';
+      var res = await fetch('/api/me');
+      me = await res.json().catch(function() { return {}; });
+      if (!res.ok || !me.email) throw new Error('Auth failed');
 
-      // Recent activity
-      var activityHtml = '';
-      (data.recentActivity || []).forEach(function(e) {
-        var dotColor = e.type === 'SUBMISSION' ? 'var(--success)' : e.type === 'AUTH' ? 'var(--accent)' : 'var(--purple)';
-        activityHtml += '<div class="timeline-item"><div class="timeline-dot" style="background:' + dotColor + '"></div><div class="timeline-content"><div class="tl-title">' + escHtml(e.detail || e.action) + '</div><div class="tl-time">' + fmtDate(e.timestamp) + '</div></div></div>';
-      });
-      el('recentActivity').innerHTML = activityHtml || '<div class="text-sm text-muted" style="text-align:center;padding:40px 0">No activity yet.</div>';
+      // Sidebar info
+      var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+      el('sidebarAvatar').textContent = initials;
+      el('sidebarName').textContent = me.approverName || me.email || 'User';
+      el('sidebarRole').textContent = me.isAdmin ? 'Administrator' : 'Approver';
+
+      // Greeting — use first name if available
+      var displayName = me.approverName || (me.email ? me.email.split('@')[0].split('.')[0] : 'there');
+      displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+      el('greeting').textContent = 'Good ' + getTimeOfDay() + ', ' + displayName;
+
+      // Show admin-only links
+      if (me.isAdmin) {
+        var adminLinks = document.querySelectorAll('.admin-only');
+        for (var i = 0; i < adminLinks.length; i++) adminLinks[i].classList.remove('hidden');
+      }
+
+      // Populate tenant selector
+      if (me.tenants && me.tenants.length > 1) {
+        var sel = el('tenantSelector');
+        sel.innerHTML = '';
+        me.tenants.forEach(function(t) {
+          var opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.name + (t.status !== 'active' ? ' (' + t.status + ')' : '');
+          if (t.id === me.tenantId) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function() {
+          switchTenant(sel.value);
+        });
+      }
+
+      return me;
     } catch(e) {
-      el('dashboardSubtitle').textContent = 'Could not load dashboard data.';
+      location.href = '/login.html';
     }
   }
 
-  // Load chart
+  // ── Update sidebar badges ──
+  function updateSidebarBadges(data) {
+    var campaignBadge = el('campaignBadge');
+    var reviewBadge = el('reviewBadge');
+    var sodBadge = el('sodBadge');
+
+    // Campaign badge: count of active campaigns
+    fetch('/api/campaigns?status=active').then(function(r){return r.json();}).then(function(camps){
+      if (campaignBadge && camps.length > 0) {
+        campaignBadge.textContent = camps.length;
+        campaignBadge.style.display = '';
+      }
+    }).catch(function(){});
+
+    // Review badge: pending count from stats
+    if (reviewBadge && data.pendingCount > 0) {
+      reviewBadge.textContent = data.pendingCount;
+      reviewBadge.style.display = '';
+    }
+
+    // SoD badge: open conflicts
+    fetch('/api/sod/stats').then(function(r){return r.json();}).then(function(stats){
+      if (sodBadge && stats.open > 0) {
+        sodBadge.textContent = stats.open;
+        sodBadge.style.display = '';
+      }
+    }).catch(function(){});
+  }
+
+  // ── KPI Stats ──
+  async function loadStats() {
+    try {
+      var res = await fetch('/api/dashboard/stats');
+      var data = await res.json();
+      if (!res.ok) throw new Error('Failed to load stats');
+
+      // Subtitle
+      el('dashboardSubtitle').textContent =
+        data.progress + '% of ' + data.totalRoles + ' roles certified. ' +
+        data.pendingCount + ' pending review' + (data.pendingCount !== 1 ? 's' : '') + '.';
+
+      // KPI grid — mockup style with icons
+      var conflictColor = data.sodConflicts > 0 ? 'var(--danger)' : 'var(--success)';
+      el('kpiGrid').innerHTML =
+        '<div class="stat-card">' +
+          '<div class="stat-header"><span class="stat-label">Total Roles Under Review</span><span class="stat-icon icon-teal">⟳</span></div>' +
+          '<div class="stat-value">' + data.totalRoles + '</div>' +
+          '<div class="stat-change up">Across all systems</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-header"><span class="stat-label">Certification Progress</span><span class="stat-icon icon-green">✓</span></div>' +
+          '<div class="stat-value">' + data.progress + '%</div>' +
+          '<div style="margin-top:8px"><div class="progress-bar"><div class="progress-fill fill-green" style="width:' + data.progress + '%"></div></div></div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-header"><span class="stat-label">Pending Approver Actions</span><span class="stat-icon icon-amber">⟐</span></div>' +
+          '<div class="stat-value" style="color:' + (data.pendingCount > 0 ? 'var(--warning)' : 'var(--success)') + '">' + data.pendingCount + '</div>' +
+          '<div class="stat-change' + (data.pendingCount > 0 ? ' down' : '') + '">' + (data.pendingCount > 0 ? data.pendingCount + ' actions awaiting review' : 'All caught up!') + '</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-header"><span class="stat-label">SoD Conflicts Detected</span><span class="stat-icon icon-purple">⚠</span></div>' +
+          '<div class="stat-value" style="color:' + conflictColor + '">' + data.sodConflicts + '</div>' +
+          '<div class="stat-change' + (data.sodConflicts > 0 ? ' down' : '') + '">' + (data.sodConflicts > 0 ? 'Needs review' : 'No conflicts detected') + '</div>' +
+        '</div>';
+
+      // Update sidebar badges
+      updateSidebarBadges(data);
+
+      // Recent activity timeline
+      renderActivity(data.recentActivity || []);
+
+      // Timestamp
+      el('lastUpdated').textContent = 'Updated ' + fmtDate(new Date().toISOString());
+    } catch(e) {
+      el('dashboardSubtitle').textContent = 'Could not load dashboard data. Check your connection.';
+      console.error('Dashboard stats error:', e);
+    }
+  }
+
+  function renderActivity(events) {
+    if (!events.length) {
+      el('recentActivity').innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-tertiary)"><div style="font-size:24px;margin-bottom:6px">📭</div><div class="text-sm">No activity yet</div></div>';
+      return;
+    }
+    var html = '';
+    events.forEach(function(e) {
+      var dotColor = e.type === 'SUBMISSION' ? 'var(--success)' :
+                     e.type === 'AUTH' ? 'var(--accent)' :
+                     e.type === 'RITM' ? 'var(--warning)' : 'var(--purple)';
+      html += '<div class="timeline-item">' +
+        '<div class="timeline-dot" style="background:' + dotColor + '"></div>' +
+        '<div class="timeline-content">' +
+          '<div class="tl-title">' + escHtml(e.detail || e.action) + '</div>' +
+          '<div class="tl-time">' + fmtDate(e.timestamp) + ' · ' + escHtml(e.email) + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    el('recentActivity').innerHTML = html;
+  }
+
+  // ── Progress-by-system chart ──
   async function loadChart() {
+    var svg = el('chartSvg');
     try {
       var res = await fetch('/api/dashboard/progress-by-system');
       var systems = await res.json();
-      if (!systems || !systems.length) return;
-      var svg = el('chartSvg');
+      if (!res.ok) throw new Error('API error');
+
+      if (!systems || !systems.length) {
+        svg.innerHTML = '<text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">No system data available. Upload role data to see progress.</text>';
+        return;
+      }
+
       var colors = ['#0891B2','#059669','#D97706','#DC2626','#7C3AED','#2563EB','#EC4899','#F59E0B'];
-      var barW = Math.min(70, Math.floor(500 / systems.length));
-      var html = '<line x1="0" y1="150" x2="600" y2="150" stroke="var(--border)" stroke-width="1"/>';
-      html += '<line x1="0" y1="112" x2="600" y2="112" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      html += '<line x1="0" y1="75" x2="600" y2="75" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      html += '<line x1="0" y1="37" x2="600" y2="37" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      html += '<text x="5" y="12" font-size="10" font-family="Inter" fill="var(--text-tertiary)">100%</text>';
-      html += '<text x="5" y="50" font-size="10" font-family="Inter" fill="var(--text-tertiary)">75%</text>';
-      html += '<text x="5" y="87" font-size="10" font-family="Inter" fill="var(--text-tertiary)">50%</text>';
-      html += '<text x="5" y="125" font-size="10" font-family="Inter" fill="var(--text-tertiary)">25%</text>';
-      var maxBars = Math.min(systems.length, 7);
+      var maxBars = Math.min(systems.length, 8);
+      var barW = Math.min(64, Math.floor(480 / maxBars));
+      var gap = Math.max(6, Math.floor((560 - maxBars * barW) / (maxBars + 1)));
+
+      var html = '';
+      // Grid lines
+      html += '<line x1="40" y1="150" x2="600" y2="150" stroke="var(--border)" stroke-width="1"/>';
+      html += '<line x1="40" y1="112" x2="600" y2="112" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      html += '<line x1="40" y1="75" x2="600" y2="75" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      html += '<line x1="40" y1="37" x2="600" y2="37" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
+      // Y-axis labels
+      html += '<text x="35" y="14" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">100%</text>';
+      html += '<text x="35" y="52" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">75%</text>';
+      html += '<text x="35" y="89" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">50%</text>';
+      html += '<text x="35" y="126" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">25%</text>';
+      html += '<text x="35" y="154" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">0%</text>';
+
       for (var i = 0; i < maxBars; i++) {
         var sys = systems[i];
-        var x = 50 + i * (barW + 12);
+        var x = 45 + i * (barW + gap);
         var barH = Math.max(4, (sys.pct / 100) * 150);
         var y = 150 - barH;
-        html += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + colors[i % colors.length] + '" opacity="0.85"/>';
-        html += '<text x="' + (x + barW/2) + '" y="' + (y - 6) + '" font-size="9" font-family="Inter" fill="var(--text-primary)" font-weight="600" text-anchor="middle">' + escHtml(sys.name.substring(0,10)) + '</text>';
-        html += '<text x="' + (x + barW/2) + '" y="165" font-size="10" font-family="Inter" fill="var(--text-tertiary)" text-anchor="middle">' + sys.pct + '%</text>';
+        var label = sys.name.length > 8 ? sys.name.substring(0,7) + '…' : sys.name;
+        var color = colors[i % colors.length];
+
+        html += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + color + '" opacity="0.85">' +
+          '<title>' + escHtml(sys.name) + ': ' + sys.reviewed + '/' + sys.total + ' (' + sys.pct + '%)</title>' +
+        '</rect>';
+        html += '<text x="' + (x + barW/2) + '" y="' + (y - 6) + '" font-size="10" font-family="Inter" fill="var(--text-primary)" font-weight="600" text-anchor="middle">' + escHtml(label) + '</text>';
+        html += '<text x="' + (x + barW/2) + '" y="166" font-size="10" font-family="Inter" fill="var(--text-tertiary)" text-anchor="middle">' + sys.pct + '%</text>';
       }
       svg.innerHTML = html;
-    } catch(e) {}
+    } catch(e) {
+      svg.innerHTML = '<text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">Chart unavailable</text>';
+      console.error('Chart error:', e);
+    }
   }
 
-  // Load campaigns
+  // ── Active campaigns ──
   async function loadCampaigns() {
     try {
       var res = await fetch('/api/dashboard/active-campaigns');
       var campaigns = await res.json();
+      if (!res.ok) throw new Error('API error');
+
       if (!campaigns || !campaigns.length) {
-        el('activeCampaigns').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-tertiary)"><div style="font-size:28px;margin-bottom:8px">📋</div>No active campaigns. Create your first certification campaign.</div>';
+        el('activeCampaigns').innerHTML =
+          '<div class="empty-state">' +
+            '<div class="es-icon">📋</div>' +
+            '<div style="font-weight:600;margin-bottom:4px">No active campaigns</div>' +
+            '<div class="text-sm">Create your first certification campaign to start tracking progress.</div>' +
+          '</div>';
         return;
       }
-      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px">';
+
+      var html = '<div class="campaign-row">';
       campaigns.forEach(function(c) {
-        var badgeClass = c.status === 'active' ? 'badge-info' : 'badge-success';
-        var badgeText = c.status === 'active' ? 'In Progress' : 'Completed';
-        html += '<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
-        html += '<div class="flex-between"><strong>' + escHtml(c.name) + '</strong><span class="badge ' + badgeClass + '">' + badgeText + '</span></div>';
-        html += '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">' + c.approvers + ' approvers · ' + c.totalRoles + ' roles · Due ' + (c.deadline || 'N/A') + '</div>';
-        html += '<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-bottom:4px"><span>' + c.progress + '% certified</span><span>' + c.reviewedRoles + '/' + c.totalRoles + '</span></div><div class="progress-bar"><div class="progress-fill progress-fill-teal" style="width:' + c.progress + '%"></div></div></div>';
+        var badgeClass = c.status === 'active' ? 'badge-info' : c.status === 'completed' ? 'badge-success' : c.status === 'draft' ? 'badge-purple' : 'badge-neutral';
+        var badgeText = c.status === 'active' ? 'In Progress' : c.status === 'completed' ? 'Completed' : c.status === 'draft' ? 'Scheduled' : c.status;
+        html += '<div class="campaign-card" onclick="location.href=\'/campaigns.html\'">';
+        html += '<div class="cc-header"><span class="cc-title">' + escHtml(c.name) + '</span><span class="badge ' + badgeClass + '">' + badgeText + '</span></div>';
+        html += '<div class="cc-meta">' + c.approvers + ' approvers · ' + c.totalRoles + ' roles · ' + (c.deadline ? 'Due ' + new Date(c.deadline).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'No deadline') + '</div>';
+        html += '<div class="cc-progress"><div class="cc-progress-info"><span>' + c.progress + '% certified</span><span>' + c.reviewedRoles + '/' + c.totalRoles + '</span></div>';
+        html += '<div class="progress-bar"><div class="fill ' + (c.progress >= 100 ? 'fill-green' : 'fill-teal') + '" style="width:' + c.progress + '%"></div></div></div>';
         html += '</div>';
       });
       html += '</div>';
       el('activeCampaigns').innerHTML = html;
-    } catch(e) {}
+    } catch(e) {
+      el('activeCampaigns').innerHTML = '<div class="text-sm text-muted" style="text-align:center;padding:20px">Campaign data unavailable</div>';
+    }
   }
 
-  // Dark mode
-  el('darkToggle').addEventListener('click', function() {
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    el('darkToggle').textContent = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
+  // ── Event listeners ──
+  // Dark mode (topbar button)
+  var dt = el('darkToggleTop');
+  if (dt) {
+    var saved = localStorage.getItem('attest_theme');
+    if (saved === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); dt.textContent = '☀️'; }
+    dt.addEventListener('click', function() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      dt.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('attest_theme', isDark ? 'light' : 'dark');
+    });
+  }
+
+  // Sign out (click user area)
+  var userArea = el('sidebarUserArea');
+  if (userArea) userArea.addEventListener('click', function() {
+    if (confirm('Sign out?')) {
+      localStorage.removeItem('attest_token');
+      localStorage.removeItem('attest_user');
+      location.href = '/login.html';
+    }
   });
 
-  // Sign out
-  el('signOutBtn').addEventListener('click', function() {
-    localStorage.removeItem('attest_token');
-    localStorage.removeItem('attest_user');
-    location.href = '/login.html';
+  el('newCampaignBtn').addEventListener('click', function() {
+    location.href = '/campaigns.html';
   });
 
-  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch(e) { return iso; } }
-  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // ── Tenant switching ──
+  async function switchTenant(tenantId) {
+    try {
+      var res = await fetch('/api/auth/switch-tenant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      localStorage.setItem('attest_token', data.token);
+      location.reload();
+    } catch(e) {
+      alert('Failed to switch tenant: ' + e.message);
+    }
+  }
 
-  // Boot
-  loadUser();
-  loadDashboard();
-  loadChart();
-  loadCampaigns();
+  // ── Restore theme ──
+  (function() {
+    var saved = localStorage.getItem('attest_theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      el('darkToggle').textContent = '☀️ Light Mode';
+    }
+  })();
+
+  // ── Boot sequence ──
+  async function boot() {
+    await loadUser();
+    // Load all data in parallel
+    await Promise.all([loadStats(), loadChart(), loadCampaigns()]);
+  }
+
+  boot().catch(function(err) {
+    console.error('Dashboard boot failed:', err);
+  });
 })();
 </script>
-</body>
+<script src="/mobile.js"></script></body>
 </html>

@@ -21,23 +21,18 @@
     var res = await fetch('/api/me');
     var me = await res.json().catch(function() { return {}; });
     if (!res.ok || !me.isAdmin) { location.href = '/'; return; }
-    await loadApprovers();
+    // Load sidebar user info
+    var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+    var av = el('sidebarAvatar'), nm = el('sidebarName'), rl = el('sidebarRole');
+    if (av) av.textContent = initials;
+    if (nm) nm.textContent = me.approverName || me.email || 'User';
+    if (rl) rl.textContent = me.isAdmin ? 'Administrator' : 'Approver';
+    if (me.tenants && me.tenants.length > 1) {
+      var sel = el('tenantSelector');
+      if (sel) { sel.innerHTML = ''; me.tenants.forEach(function(t) { var o = document.createElement('option'); o.value = t.id; o.textContent = t.name; if (t.id === me.tenantId) o.selected = true; sel.appendChild(o); }); }
+    }
     await loadData();
-    setupUpload();
     setupFilters();
-    updateDataStatus();
-  }
-
-  async function loadApprovers() {
-    var res = await fetch('/api/approvers'); if (!res.ok) return;
-    var approvers = await res.json();
-    var sel = el('impersonateApprover');
-    approvers.forEach(function(n) { sel.appendChild(new Option(n, n)); });
-    sel.addEventListener('change', function() { el('impersonateBtn').disabled = !sel.value; });
-    el('impersonateBtn').addEventListener('click', function() {
-      if (!sel.value) return;
-      location.href = '/?impersonate=' + encodeURIComponent(sel.value);
-    });
   }
 
   async function loadData() {
@@ -48,9 +43,11 @@
   // Filters
   function setupFilters() {
     ['filterRole','filterFrom','filterTo'].forEach(function(id) { el(id).addEventListener('input', render); el(id).addEventListener('change', render); });
-    el('refreshBtn').addEventListener('click', loadData);
+    el('exportXlsxBtn').addEventListener('click', exportXlsx);
     el('exportCsvBtn').addEventListener('click', exportCsv);
     el('exportPdfBtn').addEventListener('click', function() { exportPdf().catch(function() { alert('PDF export failed'); }); });
+    var evBtn = el('evidenceExportBtn');
+    if (evBtn) evBtn.addEventListener('click', function() { location.href = '/evidence.html'; });
     document.querySelectorAll('#logTable thead th[data-sort]').forEach(function(th) {
       th.addEventListener('click', function() {
         var key = th.dataset.sort;
@@ -137,13 +134,18 @@
       var tr = document.createElement('tr');
       tr.appendChild(td(fmtDate(e.timestamp)));
       tr.appendChild(td(e.approver));
-      tr.appendChild(td(e.submittedByEmail || '-'));
-      tr.appendChild(td(e.impersonated ? 'Impersonated' : 'Direct'));
       tr.appendChild(td(e.roleName));
-      var tda = td(e.action || '-');
-      if (e.action) tda.classList.add('badge-' + badgeClass(e.action));
+      // Action as badge
+      var tda = document.createElement('td');
+      if (e.action) {
+        var badge = document.createElement('span');
+        badge.className = 'badge ' + actionBadgeClass(e.action);
+        badge.textContent = e.action;
+        tda.appendChild(badge);
+      } else {
+        tda.textContent = '—';
+      }
       tr.appendChild(tda);
-      tr.appendChild(td(e.actionDetails || e.comments || ''));
       tr.appendChild(ritmCell(e));
       tr.appendChild(ritmStatusCell(e));
       tr.appendChild(td(e.submissionId));
@@ -151,6 +153,15 @@
     });
     el('emptyMsg').hidden = data.length > 0;
     renderStats(data);
+  }
+
+  function actionBadgeClass(action) {
+    var a = String(action || '').toLowerCase();
+    if (a.includes('keep')) return 'badge-success';
+    if (a.includes('modify') && a.includes('technical')) return 'badge-info';
+    if (a.includes('modify')) return 'badge-purple';
+    if (a.includes('reject')) return 'badge-danger';
+    return 'badge-neutral';
   }
 
   function td(text) { var c = document.createElement('td'); c.textContent = text == null ? '' : String(text); return c; }
@@ -209,33 +220,47 @@
     var approvers = new Set(data.map(function(e) { return e.approver; })).size;
     var ritmCount = data.filter(function(e) { return e.ritm; }).length;
     var byStatus = data.reduce(function(acc, e) { if (!e.ritm) return acc; var s = e.ritmStatus || 'Open'; acc[s] = (acc[s] || 0) + 1; return acc; }, {});
-    el('adminStats').innerHTML =
-      '<div class="stat-group"><h2>Overview</h2><div class="stat-row">' +
-        '<div class="stat-item"><span class="s-label">Submissions</span><span class="s-value">' + subs + '</span></div>' +
-        '<div class="stat-item"><span class="s-label">Roles Reviewed</span><span class="s-value">' + data.length + '</span></div>' +
-        '<div class="stat-item"><span class="s-label">Approvers</span><span class="s-value">' + approvers + '</span></div>' +
-      '</div></div>' +
-      '<div class="stat-group"><h2>Actions</h2><div class="stat-row">' +
-        ACTION_ORDER.concat(Object.keys(byAction).filter(function(a) { return !ACTION_ORDER.includes(a) && a !== '(none)'; })).map(function(a) {
-          return byAction[a] ? '<div class="stat-item"><span class="s-label">' + a + '</span><span class="s-value">' + byAction[a] + '</span></div>' : '';
-        }).join('') +
-      '</div></div>' +
-      '<div class="stat-group"><h2>RITM</h2><div class="stat-row">' +
-        '<div class="stat-item"><span class="s-label">Entered</span><span class="s-value">' + ritmCount + '</span></div>' +
-        RITM_STATUSES.map(function(s) { return '<div class="stat-item"><span class="s-label">' + s + '</span><span class="s-value">' + (byStatus[s] || 0) + '</span></div>'; }).join('') +
-      '</div></div>';
+
+    // KPI cards
+    el('statSubmissions').textContent = subs.toLocaleString();
+    el('statRoles').textContent = data.length.toLocaleString();
+    el('statApprovers').textContent = approvers.toLocaleString();
+    var ritmPct = data.length ? Math.round(ritmCount / data.length * 100) : 0;
+    el('statRitm').textContent = ritmCount.toLocaleString();
+    el('statRitmDetail').textContent = ritmCount ? ritmPct + '% of all reviews have RITM' : '';
+
+    // Action breakdown
+    el('abKeep').textContent = byAction['Keep Business Role'] || 0;
+    el('abModTech').textContent = byAction['Modify Technical Role'] || 0;
+    el('abModBiz').textContent = byAction['Modify Business Role'] || 0;
+    el('abReject').textContent = byAction['Reject Business Role'] || 0;
+
+    // Record count
+    el('recordCount').textContent = data.length.toLocaleString() + ' records';
+  }
+
+  // XLSX Export (CSV format, .xlsx extension)
+  function exportXlsx() {
+    var data = filteredSorted();
+    var cols = ['timestamp','approver','roleName','action','ritm','ritmStatus','submissionId'];
+    var esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    var lines = [cols.join(',')];
+    data.forEach(function(e) { lines.push(cols.map(function(c) { return esc(e[c] || ''); }).join(',')); });
+    var blob = new Blob([lines.join('\n')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'audit-trail-' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(url);
   }
 
   // CSV Export
   function exportCsv() {
     var data = filteredSorted();
-    var cols = ['timestamp','approver','submittedByEmail','impersonated','roleName','action','actionDetails','ritm','ritmStatus','submissionId'];
+    var cols = ['timestamp','approver','roleName','action','ritm','ritmStatus','submissionId'];
     var esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
     var lines = [cols.join(',')];
-    data.forEach(function(e) { lines.push(cols.map(function(c) { return esc(c === 'actionDetails' ? (e.actionDetails || e.comments || '') : e[c]); }).join(',')); });
+    data.forEach(function(e) { lines.push(cols.map(function(c) { return esc(e[c] || ''); }).join(',')); });
     var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'audit-log-' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(url);
+    var a = document.createElement('a'); a.href = url; a.download = 'audit-trail-' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(url);
   }
 
   // PDF Export
@@ -257,77 +282,6 @@
     });
     doc.save('audit-log-' + new Date().toISOString().slice(0,10) + '.pdf');
   }
-
-  // Upload
-  function setupUpload() {
-    var uploadToggle = el('uploadToggle');
-    var uploadBody = el('uploadBody');
-    if (uploadToggle) {
-      uploadToggle.addEventListener('click', function() {
-        var hidden = uploadBody.classList.toggle('hidden');
-        uploadToggle.innerHTML = (hidden ? '\u25B6' : '\u25BC') + ' Data Sources (Upload Excel)';
-      });
-    }
-    setupDrop('rolesDrop', 'rolesFileInput', 'rolesUploadStatus', '/api/admin/upload-roles');
-    setupDrop('txDrop', 'txFileInput', 'txUploadStatus', '/api/admin/upload-transactions');
-  }
-
-  function setupDrop(dropId, inputId, statusId, endpoint) {
-    var drop = el(dropId), input = el(inputId), status = el(statusId);
-    if (!drop || !input) return;
-    var browseBtn = document.createElement('button');
-    browseBtn.className = 'btn btn-xs btn-secondary';
-    browseBtn.textContent = 'Browse';
-    browseBtn.style.cssText = 'margin-top:6px';
-    browseBtn.addEventListener('click', function() { input.click(); });
-    drop.appendChild(browseBtn);
-
-    input.addEventListener('change', function() { if (input.files[0]) uploadFile(input.files[0], endpoint, status); });
-    ['dragenter','dragover'].forEach(function(ev) {
-      drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.add('drag-over'); });
-    });
-    ['dragleave','drop'].forEach(function(ev) {
-      drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.remove('drag-over'); });
-    });
-    drop.addEventListener('drop', function(e) {
-      var file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith('.xlsx')) uploadFile(file, endpoint, status);
-      else status.innerHTML = '<span class="upload-error">Only .xlsx files accepted.</span>';
-    });
-  }
-
-  async function uploadFile(file, endpoint, statusEl) {
-    statusEl.innerHTML = '<span class="upload-pending">Uploading ' + file.name + '...</span>';
-    var fd = new FormData(); fd.append('file', file);
-    try {
-      var res = await fetch(endpoint, { method: 'POST', body: fd });
-      var result = await res.json().catch(function() { return {}; });
-      if (!res.ok) throw new Error(result.error || 'Upload failed');
-      statusEl.innerHTML = '<span class="upload-success">' + (result.message || 'OK') + '</span>';
-      setTimeout(loadData, 1000);
-      updateDataStatus();
-    } catch(e) { statusEl.innerHTML = '<span class="upload-error">' + e.message + '</span>'; }
-  }
-
-  async function updateDataStatus() {
-    try {
-      var res = await fetch('/api/admin/data-status'); if (!res.ok) return;
-      var data = await res.json(); var elm = el('uploadCurrent'); if (!elm) return;
-      var rInfo = data.roles.file ? 'Last: ' + new Date(data.roles.file.modified).toLocaleString() : 'Not uploaded';
-      var tInfo = data.transactions.file ? 'Last: ' + new Date(data.transactions.file.modified).toLocaleString() : 'Not uploaded';
-      elm.innerHTML = '<strong>Current data:</strong> ' + data.roles.total + ' roles, ' + data.roles.approvers + ' approvers | ' +
-        data.transactions.rolesWithData + ' role groups, ' + data.transactions.totalRows + ' tx rows<br>' +
-        '<small>Roles: ' + rInfo + ' | Transactions: ' + tInfo + '</small>';
-    } catch(e) {}
-  }
-
-  // Dark mode
-  var dt = el('darkToggle');
-  if (dt) dt.addEventListener('click', function() {
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    dt.textContent = isDark ? '\u{1F319} Dark Mode' : '\u{2600}\u{FE0F} Light Mode';
-  });
 
   boot();
 })();

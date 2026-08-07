@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Configuration</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .toggle { width:40px; height:22px; background:#CBD5E1; border-radius:11px; cursor:pointer; position:relative; transition:background .15s; border:none; flex-shrink:0; }
+  .toggle.on { background:var(--accent); }
+  .toggle::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+  .toggle.on::after { transform:translateX(18px); }
+  [data-theme="dark"] .toggle { background:#475569; }
+  .switch-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border-light); }
+  .switch-row:last-child { border-bottom:none; }
+  .switch-label { font-weight:500; font-size:13px; }
+  .switch-desc { font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+  [data-theme="dark"] .switch-row { border-color:var(--border-light); }
+</style>
+</head>
+<body class="has-sidebar">
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item active" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Configuration</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search roles, approvers, campaigns..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" id="darkToggle2" title="Toggle dark mode">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔</button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="content-header"><h1>Configuration</h1><p>Global settings, SSO integration, email notifications, and branding.</p></div>
+
+    <div class="card mb-16">
+      <div class="card-header"><h2>Single Sign-On (SSO)</h2></div>
+      <div class="card-body">
+        <div class="switch-row"><div><div class="switch-label">SAML 2.0 Authentication</div><div class="switch-desc">Integrate with Azure AD, Okta, PingID, or any SAML IdP</div></div><button class="toggle" data-key="sso_saml" onclick="toggleSetting(this)"></button></div>
+        <div class="switch-row"><div><div class="switch-label">OIDC / OAuth 2.0</div><div class="switch-desc">OpenID Connect for modern identity providers</div></div><button class="toggle" data-key="sso_oidc" onclick="toggleSetting(this)"></button></div>
+        <div class="switch-row"><div><div class="switch-label">Active Directory Sync</div><div class="switch-desc">Automatically sync approvers from LDAP/AD groups</div></div><button class="toggle" data-key="sso_ad_sync" onclick="toggleSetting(this)"></button></div>
+      </div>
+    </div>
+
+    <div class="card mb-16">
+      <div class="card-header"><h2>Email Notifications</h2></div>
+      <div class="card-body">
+        <div class="switch-row"><div><div class="switch-label">Campaign reminders</div><div class="switch-desc">Auto-remind approvers 7, 3, and 1 day before deadline</div></div><button class="toggle on" data-key="email_campaign_reminders" onclick="toggleSetting(this)"></button></div>
+        <div class="switch-row"><div><div class="switch-label">SoD conflict alerts</div><div class="switch-desc">Notify compliance officer when new SoD conflicts are detected</div></div><button class="toggle on" data-key="email_sod_alerts" onclick="toggleSetting(this)"></button></div>
+        <div class="switch-row"><div><div class="switch-label">Audit evidence ready</div><div class="switch-desc">Notify when evidence package is generated for auditor download</div></div><button class="toggle on" data-key="email_evidence_ready" onclick="toggleSetting(this)"></button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>White-Label Branding</h2></div>
+      <div class="card-body">
+        <div class="switch-row"><div><div class="switch-label">Custom logo & colors</div><div class="switch-desc">Replace Attest branding with client brand for self-hosted deployments</div></div><button class="toggle" data-key="branding_custom" onclick="toggleSetting(this)"></button></div>
+        <div class="switch-row"><div><div class="switch-label">Custom domain</div><div class="switch-desc">Serve from compliance.clientdomain.com</div></div><button class="toggle" data-key="branding_custom_domain" onclick="toggleSetting(this)"></button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var el=function(id){return document.getElementById(id);};
+  var token=localStorage.getItem('attest_token');
+  if(!token){location.href='/login.html';}
+  var origFetch=window.fetch;
+  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+
+  // Load user
+  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
+    var initials=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+    el('sidebarAvatar').textContent=initials;el('sidebarName').textContent=me.approverName||me.email||'User';
+    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
+    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
+  }).catch(function(){});
+
+  // Dark mode (topbar button)
+  var dt2=el('darkToggle2');
+  if(dt2){
+    var saved=localStorage.getItem('attest_theme');
+    if(saved==='dark'){document.documentElement.setAttribute('data-theme','dark');dt2.textContent='☀️';}
+    dt2.addEventListener('click',function(){
+      var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+      document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
+      dt2.textContent=isDark?'🌙':'☀️';
+      localStorage.setItem('attest_theme',isDark?'light':'dark');
+    });
+  }
+
+  // Sign out (click user area)
+  var userArea=el('sidebarUserArea');
+  if(userArea)userArea.addEventListener('click',function(){
+    if(confirm('Sign out?')){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';}
+  });
+
+  // Load settings from API
+  fetch('/api/settings').then(function(r){return r.json();}).then(function(settings){
+    var toggles=document.querySelectorAll('.toggle[data-key]');
+    toggles.forEach(function(t){
+      var key=t.getAttribute('data-key');
+      if(settings[key])t.classList.add('on');
+      else t.classList.remove('on');
+    });
+  }).catch(function(){});
+
+  // Toggle setting via API
+  window.toggleSetting=function(btn){
+    btn.classList.toggle('on');
+    var key=btn.getAttribute('data-key');
+    var value=btn.classList.contains('on');
+    fetch('/api/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,value:value})}).catch(function(){});
+  };
+})();
+</script>
+<script src="/mobile.js"></script></body>
+</html>

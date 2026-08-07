@@ -13,11 +13,11 @@ class SqliteLogStore {
       INSERT OR REPLACE INTO submissions
         (log_entry_id, submission_id, timestamp, approver, submitted_by_email,
          impersonated, role_name, action, ritm, ritm_status, action_details,
-         comments, rejection_reason, row_index)
+         comments, rejection_reason, row_index, campaign_id, tenant_id)
       VALUES
         (@logEntryId, @submissionId, @timestamp, @approver, @submittedByEmail,
          @impersonated, @roleName, @action, @ritm, @ritmStatus, @actionDetails,
-         @comments, @rejectionReason, @rowIndex)
+         @comments, @rejectionReason, @rowIndex, @campaignId, @tenantId)
     `);
     const insertMany = this.db.transaction((entries) => {
       for (const e of entries) {
@@ -36,6 +36,8 @@ class SqliteLogStore {
           comments: e.comments || '',
           rejectionReason: e.rejectionReason || '',
           rowIndex: e.rowIndex,
+          campaignId: e.campaignId || '',
+          tenantId: e.tenantId || 'default',
         });
       }
     });
@@ -45,6 +47,9 @@ class SqliteLogStore {
   async readAll(filters = {}) {
     let sql = 'SELECT * FROM submissions WHERE 1=1';
     const params = {};
+    const tenantId = filters.tenantId || 'default';
+    sql += ' AND tenant_id = @tenantId';
+    params.tenantId = tenantId;
     if (filters.approver) { sql += ' AND approver = @approver'; params.approver = filters.approver; }
     if (filters.action)   { sql += ' AND action = @action';     params.action = filters.action; }
     if (filters.role)     { sql += ' AND role_name = @role';    params.role = filters.role; }
@@ -65,6 +70,7 @@ class SqliteLogStore {
       comments: r.comments,
       rejectionReason: r.rejection_reason,
       rowIndex: r.row_index,
+      campaignId: r.campaign_id || '',
     }));
   }
 

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Campaigns</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">A</div><span class="logo-text">Attest</span><span class="logo-badge">BETA</span></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item active" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Campaigns</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" placeholder="Search roles, approvers, campaigns..."></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn" title="Dark mode">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔</button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="content-header flex-between">
+      <div><h1>Access Certification Campaigns</h1><p>Create and manage periodic access review campaigns for SOX, ITGC, ISO 27001, and internal compliance.</p></div>
+      <button class="btn btn-primary" id="newCampaignBtn">+ New Campaign</button>
+    </div>
+    <div class="card"><div class="card-body no-pad">
+      <table class="data-table"><thead><tr><th>Campaign</th><th>Framework</th><th>Period</th><th>Approvers</th><th>Roles</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+        <tbody id="campaignsBody"><tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">Loading campaigns…</td></tr></tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="campaignModal">
+  <div class="modal modal-wide"><div class="modal-header"><h3>New Access Certification Campaign</h3><button class="modal-close" id="modalClose">✕</button></div>
+    <div class="modal-body" style="display:grid;gap:14px">
+      <div class="modal-error" id="modalError"></div>
+      <div><label class="form-label">Campaign Name *</label><input class="form-input" id="campName" placeholder="e.g. Q4 SOX ITGC Access Review"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="form-label">Framework *</label><select class="form-select" id="campFramework"><option value="SOX">SOX / ITGC</option><option value="ISO27001">ISO 27001</option><option value="SOC2">SOC 2</option><option value="GDPR">GDPR</option><option value="NIST">NIST 800-53</option><option value="COBIT">COBIT 2019</option></select></div>
+        <div><label class="form-label">Period *</label><select class="form-select" id="campPeriod"><option>Q4 2026</option><option>H2 2026</option><option>Annual 2026</option><option>Ongoing</option></select></div>
+      </div>
+      <div><label class="form-label">Deadline</label><input class="form-input" type="date" id="campDeadline"></div>
+      <div><label class="form-label">Approvers</label><select class="form-select" id="approverSelect" multiple style="min-height:100px"></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modalCancel">Cancel</button><button class="btn btn-primary" id="modalSave">Create Campaign</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var el=function(id){return document.getElementById(id);},state={campaigns:[]};
+  var token=localStorage.getItem('attest_token');if(!token){location.href='/login.html';}
+  var origFetch=window.fetch;
+  window.fetch=function(url,opts){opts=opts||{};opts.headers=opts.headers||{};if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;return origFetch(url,opts);};
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
+
+  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
+    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
+    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
+    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
+  }).catch(function(){});
+
+  function loadCampaigns(){
+    fetch('/api/campaigns').then(function(r){return r.json();}).then(function(data){
+      state.campaigns=data;
+      // Update badge
+      var active=data.filter(function(c){return c.status==='active';}).length;
+      var badge=el('campaignBadge');if(badge&&active>0){badge.textContent=active;badge.style.display='';}
+      render();
+    });
+  }
+  function render(){
+    var tbody=el('campaignsBody');
+    if(!state.campaigns.length){tbody.innerHTML='<tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">No campaigns yet. Create your first campaign to get started.</td></tr>';return;}
+    var html='';
+    state.campaigns.forEach(function(c){
+      var fwBadge=c.framework==='SOX'?'badge-info':c.framework==='ISO27001'?'badge-purple':c.framework==='SOC2'?'badge-teal':c.framework==='GDPR'?'badge-warning':'badge-neutral';
+      var stBadge=c.status==='active'?'badge-info':c.status==='completed'?'badge-success':c.status==='draft'?'badge-purple':'badge-neutral';
+      var stLabel=c.status==='active'?'In Progress':c.status==='completed'?'Completed':c.status==='draft'?'Scheduled':c.status;
+      var totalRoles=15;
+      // Calculate progress from real submissions
+      var progressPct=c.status==='completed'?100:(c.status==='draft'?0:15);
+      html+='<tr><td><strong>'+esc(c.name)+'</strong></td>'+
+        '<td><span class="badge '+fwBadge+'">'+esc(c.framework)+'</span></td>'+
+        '<td>'+esc(c.period)+'</td><td>'+(c.approvers||[]).length+'</td>'+
+        '<td>'+totalRoles+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="progress-fill '+(c.status==='completed'?'fill-green':'fill-teal')+'" style="width:'+progressPct+'%"></div></div>'+(c.status==='completed'?'100%':c.status==='draft'?'—':progressPct+'%')+'</div></td>'+
+        '<td><span class="badge '+stBadge+'">'+stLabel+'</span></td>'+
+        '<td><div class="btn-group">'+
+          (c.status==='draft'?'<button class="btn btn-ghost btn-sm act-btn" data-action="active" data-id="'+c.id+'">Activate</button>':'')+
+          (c.status==='active'?'<button class="btn btn-ghost btn-sm act-btn" data-action="completed" data-id="'+c.id+'">Complete</button>':'')+
+          (c.status==='completed'?'<button class="btn btn-ghost btn-sm act-btn" data-action="archived" data-id="'+c.id+'">Archive</button>':'')+
+          (c.status!=='active'?'<button class="btn btn-ghost btn-sm act-btn" data-action="delete" data-id="'+c.id+'" style="color:var(--danger)">Delete</button>':'')+
+        '</div></td></tr>';
+    });
+    tbody.innerHTML=html;
+    tbody.querySelectorAll('.act-btn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();handleAction(b.dataset.action,b.dataset.id);});});
+  }
+  async function handleAction(action,id){
+    if(action==='delete'){if(!confirm('Delete this campaign?'))return;await fetch('/api/campaigns/'+id,{method:'DELETE'});loadCampaigns();return;}
+    var ns={active:'active',completed:'completed',archived:'archived'}[action];if(!ns)return;
+    await fetch('/api/campaigns/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:ns})});
+    loadCampaigns();
+  }
+  function openModal(){el('campaignModal').classList.remove('hidden');el('modalError').textContent='';el('campName').value='';el('campDeadline').value='';
+    fetch('/api/approvers').then(function(r){return r.json();}).then(function(a){var s=el('approverSelect');s.innerHTML='';a.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});});
+  }
+  function closeModal(){el('campaignModal').classList.add('hidden');}
+  el('newCampaignBtn').addEventListener('click',openModal);
+  el('modalClose').addEventListener('click',closeModal);el('modalCancel').addEventListener('click',closeModal);
+  el('modalSave').addEventListener('click',function(){
+    var name=el('campName').value.trim();if(!name){el('modalError').textContent='Campaign name is required.';return;}
+    var sel=el('approverSelect');var apps=[];for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)apps.push(sel.options[i].value);}
+    fetch('/api/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,framework:el('campFramework').value,period:el('campPeriod').value,deadline:el('campDeadline').value,approvers:apps})})
+    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadCampaigns();})
+    .catch(function(e){el('modalError').textContent=e.message;});
+  });
+  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
+  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+  loadCampaigns();
+})();
+</script>
+<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+</html>

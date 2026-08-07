@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attest — Audit Trail</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="has-sidebar">
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-badge"><span class="logo-icon">A</span><span class="logo-text">Attest</span><span class="logo-beta">BETA</span></div></div>
+  <div class="sidebar-tenant"><select id="tenantSelector"><option>Default Organization</option></select></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section"><div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
+      <a class="sidebar-item" href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Review</div>
+      <a class="sidebar-item" href="/reviews.html"><span class="item-icon">☰</span>My Reviews</a>
+      <a class="sidebar-item" href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>
+      <a class="sidebar-item active" href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
+      <a class="sidebar-item" href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts</a>
+      <a class="sidebar-item" href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Administration</div>
+      <a class="sidebar-item" href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
+      <a class="sidebar-item" href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
+      <a class="sidebar-item" href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
+    </div>
+    <div class="sidebar-section"><div class="sidebar-section-label">Settings</div>
+      <a class="sidebar-item" href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
+      <a class="sidebar-item" href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user" id="sidebarUserArea" title="Click for options"><div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div></div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Attest <span style="margin:0 4px;color:var(--text-tertiary)">›</span> <span>Audit Trail</span></div>
+    <div class="topbar-search"><span class="search-icon">⌕</span><input type="search" id="globalSearch" placeholder="Search submissions by role, approver, or ID…"></div>
+    <div class="topbar-actions">
+      <select class="lang-select"><option>EN</option><option>ES</option></select>
+      <button class="topbar-btn dark-toggle" title="Toggle dark mode">🌙</button>
+      <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+      <button class="topbar-btn" title="Help">?</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="content-header">
+      <div>
+        <h1>Audit Trail</h1>
+        <p>Immutable record of every access certification decision. Filter, export, and present to external auditors.</p>
+      </div>
+    </div>
+
+    <!-- KPI Stat Cards — dashboard style -->
+    <div class="stats-grid" id="kpiGrid">
+      <div class="stat-card"><div class="stat-header"><span class="stat-label">Total Submissions</span><span class="stat-icon icon-teal">⟳</span></div><div class="stat-value" id="statSubmissions">—</div></div>
+      <div class="stat-card"><div class="stat-header"><span class="stat-label">Roles Reviewed</span><span class="stat-icon icon-green">✓</span></div><div class="stat-value" id="statRoles">—</div></div>
+      <div class="stat-card"><div class="stat-header"><span class="stat-label">Unique Approvers</span><span class="stat-icon icon-amber">👥</span></div><div class="stat-value" id="statApprovers">—</div></div>
+      <div class="stat-card"><div class="stat-header"><span class="stat-label">RITM Coverage</span><span class="stat-icon icon-purple">📋</span></div><div class="stat-value" id="statRitm">—</div><div class="stat-label" id="statRitmDetail"></div></div>
+    </div>
+
+    <!-- Action Breakdown + Export Row -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:18px">
+      <!-- Action Breakdown -->
+      <div class="card">
+        <div class="card-header"><h2>Action Breakdown</h2></div>
+        <div class="card-body">
+          <div class="action-breakdown" id="actionBreakdown">
+            <div class="ab-item"><span class="ab-dot fill-green"></span><span class="ab-label">Keep</span><span class="ab-count" id="abKeep">—</span></div>
+            <div class="ab-item"><span class="ab-dot fill-teal"></span><span class="ab-label">Modify Technical</span><span class="ab-count" id="abModTech">—</span></div>
+            <div class="ab-item"><span class="ab-dot fill-purple"></span><span class="ab-label">Modify Business</span><span class="ab-count" id="abModBiz">—</span></div>
+            <div class="ab-item"><span class="ab-dot fill-danger"></span><span class="ab-label">Reject</span><span class="ab-count" id="abReject">—</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Export Card -->
+      <div class="card" style="min-width:200px">
+        <div class="card-header"><h2>Export</h2></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-secondary btn-sm" id="exportXlsxBtn" style="justify-content:flex-start">📊 Export XLSX</button>
+          <button class="btn btn-secondary btn-sm" id="exportCsvBtn" style="justify-content:flex-start">📄 Export CSV</button>
+          <button class="btn btn-secondary btn-sm" id="exportPdfBtn" style="justify-content:flex-start">📑 Export PDF</button>
+          <button class="btn btn-primary btn-sm" id="evidenceExportBtn" style="justify-content:flex-start">📦 Evidence Package</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-16">
+      <div class="card-header"><h2>Filters</h2></div>
+      <div class="card-body" style="padding:12px 20px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Approver</label>
+            <div class="multi-filter" id="filterApproverMulti">
+              <button class="btn btn-secondary btn-sm multi-filter-btn" id="filterApproverBtn">All</button>
+              <div class="multi-filter-menu hidden" id="filterApproverMenu"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Action</label>
+            <div class="multi-filter" id="filterActionMulti">
+              <button class="btn btn-secondary btn-sm multi-filter-btn" id="filterActionBtn">All</button>
+              <div class="multi-filter-menu hidden" id="filterActionMenu"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">Role</label>
+            <input id="filterRole" type="search" placeholder="Type to filter…" class="form-input" style="width:160px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">From</label>
+            <input id="filterFrom" type="date" class="form-input" style="width:140px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="text-sm" style="font-weight:600">To</label>
+            <input id="filterTo" type="date" class="form-input" style="width:140px">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card">
+      <div class="card-header flex-between">
+        <h2>Submission Records</h2>
+        <span class="text-sm text-muted" id="recordCount">— records</span>
+      </div>
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table class="data-table" id="logTable">
+            <thead>
+              <tr>
+                <th data-sort="timestamp">Timestamp</th>
+                <th data-sort="approver">Approver</th>
+                <th data-sort="roleName">Role</th>
+                <th data-sort="action">Action</th>
+                <th data-sort="ritm">RITM</th>
+                <th data-sort="ritmStatus">RITM Status</th>
+                <th data-sort="submissionId">Submission ID</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="text-sm text-muted mt-12" id="emptyMsg" hidden>No submissions match the current filters.</p>
+  </div>
+</div>
+
+<script src="/vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="/vendor/jspdf-autotable/jspdf.plugin.autotable.min.js"></script>
+<script src="audit-trail.js"></script>
+<script src="/shared.js"></script><script src="/mobile.js"></script></body>
+</html>

@@ -20,7 +20,7 @@
   }
 
   async function loadAdmins() {
-    error.textContent = '';
+    error.textContent = ''; error.style.display = 'none';
     try {
       const res = await fetch('/api/admin-users');
       if (!res.ok) throw new Error('Could not load admin users.');
@@ -41,7 +41,9 @@
       const tr = document.createElement('tr');
       const isProtected = protectedAdmins.includes(email);
       tr.appendChild(td(email));
-      tr.appendChild(td(isProtected ? 'Technical Support' : 'Admin'));
+      var typeCell = document.createElement('td');
+      typeCell.innerHTML = isProtected ? '<span class="badge badge-info">Technical Support</span>' : '<span class="badge badge-purple">Admin</span>';
+      tr.appendChild(typeCell);
       const action = document.createElement('td');
       const btn = document.createElement('button');
       btn.className = 'btn-secondary';
@@ -93,8 +95,37 @@
       await addAdmin(input.value);
     } catch (e) {
       error.textContent = e.message || 'Could not add admin user.';
+      error.style.display = 'block';
     }
   });
+
+  // Load sidebar user info
+  async function loadSidebarUser() {
+    try {
+      var res = await fetch('/api/me');
+      var me = await res.json().catch(function() { return {}; });
+      if (!res.ok) return;
+      var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
+      var av = document.getElementById('sidebarAvatar'), nm = document.getElementById('sidebarName'), rl = document.getElementById('sidebarRole');
+      if (av) av.textContent = initials;
+      if (nm) nm.textContent = me.approverName || me.email || 'User';
+      if (rl) rl.textContent = me.isAdmin ? 'Administrator' : 'Approver';
+      // Populate tenant selector if multi-tenant
+      if (me.tenants && me.tenants.length > 1) {
+        var sel = document.getElementById('tenantSelector');
+        if (sel) {
+          sel.innerHTML = '';
+          me.tenants.forEach(function(t) {
+            var o = document.createElement('option');
+            o.value = t.id; o.textContent = t.name;
+            if (t.id === me.tenantId) o.selected = true;
+            sel.appendChild(o);
+          });
+        }
+      }
+    } catch(e) {}
+  }
+  loadSidebarUser();
 
   async function boot() {
     const ok = await verifyAdmin();
