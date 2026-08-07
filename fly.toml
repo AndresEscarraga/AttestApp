@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'attest'
+app = 'attestapp'
 primary_region = 'iad'
 
 [build]
@@ -14,7 +14,7 @@ primary_region = 'iad'
   DB_PATH = '/app/data/attest.db'
   NODE_ENV = 'production'
   PORT = '3000'
-  REPORTS_DIR = '/app/Reports'
+  REPORTS_DIR = '/app/data/sources'
   ROLES_FILE_NAME = 'Roles Approvers.xlsx'
   TX_FILE_NAME = 'Transactions.xlsx'
 

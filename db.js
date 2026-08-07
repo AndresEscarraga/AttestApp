@@ -4,7 +4,7 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'attest.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'attest.db');
 
 let db = null;
 
@@ -188,31 +188,6 @@ function getDb() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_submissions_tenant ON submissions(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_activity_tenant ON activity(tenant_id);
-  `);
-
-  // Safe migration: add password_hash to admin_users
-  try {
-    db.exec("ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''");
-    console.log('[db] Added password_hash column to admin_users.');
-  } catch (e) {
-    // Column already exists — ignore
-  }
-
-  // Phase 5: API Keys table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS api_keys (
-      id TEXT PRIMARY KEY,
-      tenant_id TEXT NOT NULL DEFAULT 'default',
-      name TEXT NOT NULL,
-      key_prefix TEXT NOT NULL,
-      key_hash TEXT NOT NULL,
-      permissions TEXT NOT NULL DEFAULT 'read-only',
-      created_by TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      last_used_at TEXT,
-      revoked INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id);
   `);
 
   console.log(`[db] SQLite connected: ${DB_PATH}`);
