@@ -215,6 +215,25 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id);
   `);
 
+  // Phase 5.1: Notifications table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL DEFAULT '',
+      link TEXT NOT NULL DEFAULT '',
+      icon TEXT NOT NULL DEFAULT '🔔',
+      read INTEGER NOT NULL DEFAULT 0,
+      email TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifications_tenant ON notifications(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(tenant_id, read);
+    CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+  `);
+
   console.log(`[db] SQLite connected: ${DB_PATH}`);
   return db;
 }

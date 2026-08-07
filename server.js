@@ -21,6 +21,7 @@ const { createSodStore } = require('./stores/sodStore');
 const { createEvidenceStore } = require('./stores/evidenceStore');
 const { createTenantStore } = require('./stores/tenantStore');
 const { createApiKeyStore } = require('./stores/apiKeyStore');
+const { createNotificationStore } = require('./stores/notificationStore');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,7 @@ const sodStore = createSodStore();
 const evidenceStore = createEvidenceStore();
 const tenantStore = createTenantStore();
 const apiKeyStore = createApiKeyStore();
+const notificationStore = createNotificationStore();
 
 const UNAUTHORIZED_MESSAGE = 'You are not authorized to use this application. Please contact your system administrator.';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -636,6 +638,16 @@ app.post('/api/log', async (req, res) => {
       detail: `Submission ${submissionId} for ${approver}: ${entries.length} role(s)`
         + (req.auth.isAdmin && approver !== req.auth.approverName ? ' (impersonated)' : ''),
     });
+
+    createNotification({
+      tenant_id: req.tenantId || 'default',
+      type: 'submission',
+      title: 'New certification submitted',
+      body: `${approver} certified ${entries.length} role(s).`,
+      link: '/audit-trail.html',
+      icon: '✅',
+    });
+
     res.json({ ok: true, submissionId, recorded: entries.length });
   } catch (err) {
     console.error('POST /api/log failed:', err);
@@ -1045,6 +1057,15 @@ app.post('/api/campaigns', requireAdmin, async (req, res) => {
       detail: `Campaign "${campaign.name}" created (${campaign.id})`,
     });
 
+    createNotification({
+      tenant_id: req.tenantId || 'default',
+      type: 'campaign',
+      title: 'New campaign created',
+      body: `"${campaign.name}" is ready for review.`,
+      link: '/campaigns.html',
+      icon: '📋',
+    });
+
     res.status(201).json(campaign);
   } catch (err) {
     console.error('POST /api/campaigns failed:', err);
@@ -1127,6 +1148,20 @@ app.patch('/api/campaigns/:id', requireAdmin, async (req, res) => {
       email: req.auth.email,
       detail: `Campaign "${campaign.name}" updated (status: ${campaign.status})`,
     });
+
+    // Create notification on status change
+    if (updates.status) {
+      const statusLabels = { active: 'activated', completed: 'completed', archived: 'archived', draft: 'set to draft' };
+      const label = statusLabels[updates.status] || 'updated';
+      createNotification({
+        tenant_id: req.tenantId || 'default',
+        type: 'campaign',
+        title: `Campaign ${label}`,
+        body: `"${campaign.name}" was ${label}.`,
+        link: '/campaigns.html',
+        icon: '📋',
+      });
+    }
 
     res.json(campaign);
   } catch (err) {
@@ -1250,6 +1285,19 @@ app.post('/api/sod/detect', requireAdmin, async (req, res) => {
       const conflicts = await sodStore.detectConflicts(approver, roles);
       allConflicts.push(...conflicts);
     }
+
+    if (allConflicts.length > 0) {
+      const criticalCount = allConflicts.filter(c => c.severity === 'critical').length;
+      createNotification({
+        tenant_id: req.tenantId || 'default',
+        type: 'sod',
+        title: `${allConflicts.length} SoD conflict(s) detected`,
+        body: `${criticalCount} critical, ${allConflicts.length - criticalCount} high severity.`,
+        link: '/sod.html',
+        icon: '⚠️',
+      });
+    }
+
     res.json({ detected: allConflicts.length, conflicts: allConflicts });
   } catch (err) {
     console.error('POST /api/sod/detect failed:', err);
@@ -1309,6 +1357,15 @@ app.post('/api/evidence/generate', requireAdmin, async (req, res) => {
       action: 'evidence_generated',
       email: req.auth.email,
       detail: `Evidence package "${pkg.name}" generated (${(pkg.file_size / 1024).toFixed(1)} KB)`,
+    });
+
+    createNotification({
+      tenant_id: req.tenantId || 'default',
+      type: 'evidence',
+      title: 'Evidence package ready',
+      body: `"${pkg.name}" has been generated and is ready for auditor download.`,
+      link: '/evidence.html',
+      icon: '📦',
     });
 
     res.status(201).json(pkg);
@@ -1533,6 +1590,78 @@ app.patch('/api/settings', requireAdmin, async (req, res) => {
     res.json({ ok: true, settings: merged });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings.' });
+  }
+});
+
+// ---------- Notifications API ----------
+
+// Helper: create a notification and return it (non-blocking)
+async function createNotification(opts) {
+  try {
+    return await notificationStore.create({
+      tenant_id: opts.tenant_id || 'default',
+      type: opts.type || 'system',
+      title: opts.title || '',
+      body: opts.body || '',
+      link: opts.link || '',
+      icon: opts.icon || '',
+      email: opts.email || '',
+    });
+  } catch (err) {
+    console.warn('[notifications] Failed to create:', err.message);
+    return null;
+  }
+}
+
+// GET /api/notifications — list notifications for current tenant
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const tenantId = req.tenantId || 'default';
+    const type = req.query.type || '';
+    const unreadOnly = req.query.unread === '1';
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const filters = { tenant_id: tenantId, limit };
+    if (type) filters.type = type;
+    if (unreadOnly) filters.read = false;
+
+    const [notifications, unreadCount] = await Promise.all([
+      notificationStore.readAll(filters),
+      notificationStore.getUnreadCount(tenantId),
+    ]);
+    res.json({ notifications, unreadCount });
+  } catch (err) {
+    console.error('GET /api/notifications failed:', err);
+    res.status(500).json({ error: 'Failed to load notifications.' });
+  }
+});
+
+// PATCH /api/notifications/:id/read — mark one notification as read
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  try {
+    await notificationStore.markRead(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update notification.' });
+  }
+});
+
+// PATCH /api/notifications/read-all — mark all notifications as read
+app.patch('/api/notifications/read-all', async (req, res) => {
+  try {
+    await notificationStore.markAllRead(req.tenantId || 'default');
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update notifications.' });
+  }
+});
+
+// GET /api/notifications/unread-count — lightweight poll for badge
+app.get('/api/notifications/unread-count', async (req, res) => {
+  try {
+    const count = await notificationStore.getUnreadCount(req.tenantId || 'default');
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get unread count.' });
   }
 });
 

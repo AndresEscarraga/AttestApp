@@ -16,9 +16,13 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="styles.css">
 
+
+
 <script src="/shared.js"></script>
 </head>
 <body class="has-sidebar">
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
 <!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
@@ -86,7 +90,10 @@
 
 
 
+
 <div class="main">
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
 <!-- Topbar component — injected by build.js -->
 <!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
 <!-- Topbar component — injected by build.js -->
@@ -102,10 +109,22 @@
     <span class="text-sm text-muted" id="lastUpdated"></span>
     <select class="lang-select" id="langSelect"><option value="EN">EN</option><option value="ES">ES</option></select>
     <button class="topbar-btn dark-toggle" id="darkToggleTop" title="Toggle dark mode">🌙</button>
-    <button class="topbar-btn" title="Notifications">🔔<span class="dot"></span></button>
+    <div class="notif-wrapper" id="notifWrapper">
+      <button class="topbar-btn" id="notifBell" title="Notifications">🔔<span class="notif-badge hidden" id="notifBadge"></span></button>
+      <div class="notif-dropdown hidden" id="notifDropdown">
+        <div class="notif-header">
+          <span class="notif-title">Notifications</span>
+          <button class="notif-mark-all" id="notifMarkAll">Mark all read</button>
+        </div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-empty">No notifications yet</div>
+        </div>
+      </div>
+    </div>
     <button class="topbar-btn" title="Help">?</button>
   </div>
 </header>
+
 
 
 

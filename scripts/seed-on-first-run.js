@@ -272,6 +272,22 @@ function seedDatabase() {
   }
   console.log('[seed] Activity events:', activities.length);
 
+  // Notifications
+  const notifications = [
+    { type:'campaign', title:'Campaign activated', body:'"Q3 SOX ITGC Access Review" is now active. 5 approvers assigned.', link:'/campaigns.html', icon:'📋', hours: 10 },
+    { type:'submission', title:'New certifications submitted', body:'Jamie Rivera certified 4 roles in SAP FI Module.', link:'/audit-trail.html', icon:'✅', hours: 2 },
+    { type:'sod', title:'2 SoD conflicts detected', body:'Critical: AP Clerk + GL Accountant (Morgan Taylor). Review needed.', link:'/sod.html', icon:'⚠️', hours: 16 },
+    { type:'evidence', title:'Evidence package generated', body:'"Q3 SOX ITGC — Final Certification Package" ready for PwC audit.', link:'/evidence.html', icon:'📦', hours: 24 },
+    { type:'submission', title:'IT roles certified', body:'Casey Morrison certified 3 IT roles (System Admin, Network, Help Desk).', link:'/audit-trail.html', icon:'✅', hours: 30 },
+    { type:'campaign', title:'New campaign created', body:'"ISO 27001 Annual Re-certification" is in draft. Configure approvers to activate.', link:'/campaigns.html', icon:'📋', hours: 36 },
+    { type:'system', title:'Data source updated', body:'Roles Approvers.xlsx uploaded with 15 business roles across 7 systems.', link:'/data-sources.html', icon:'📊', hours: 48 },
+  ];
+  const insertNotif = db.prepare('INSERT INTO notifications (id, tenant_id, type, title, body, link, icon, read, email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)');
+  for (const n of notifications) {
+    insertNotif.run(uid('notif_'), 'default', n.type, n.title, n.body, n.link, n.icon, 0, 'admin.one@attest.local', hoursAgo(n.hours));
+  }
+  console.log('[seed] Notifications:', notifications.length);
+
   console.log('[seed] ✅ Demo data seeded successfully!');
 }
 
