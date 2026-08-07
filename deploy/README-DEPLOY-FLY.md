@@ -203,4 +203,4 @@ Fly.io scales to zero on free tier. First request after inactivity takes ~3-5 se
 flyctl certs create yourdomain.com
 ```
 
-Then add the CNAME record in your DNS provider pointing to `attestapp.fly.dev`.
+Then add the CNAME record in your DNS provider pointing to `roledict.fly.dev`.

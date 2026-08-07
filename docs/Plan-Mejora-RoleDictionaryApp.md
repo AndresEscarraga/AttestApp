@@ -752,7 +752,7 @@ gantt
 
 ## 8. Plan de Ejecución por Fases
 
-> 🏗️ **Meta final de UI/UX:** Cada fase de desarrollo debe alinearse con el diseño del mockup [`mockup-futuro.html`](mockup-futuro.html). CSS variables, componentes, layout sidebar+topbar, paleta de colores y tipografía Inter deben implementarse tal como se ven en el mockup. La app actual en Fly.io (`https://attestapp.fly.dev`) sirve como plataforma funcional; la experiencia visual completa es la del mockup.
+> 🏗️ **Meta final de UI/UX:** Cada fase de desarrollo debe alinearse con el diseño del mockup [`mockup-futuro.html`](mockup-futuro.html). CSS variables, componentes, layout sidebar+topbar, paleta de colores y tipografía Inter deben implementarse tal como se ven en el mockup. La app actual en Fly.io (`https://roledict.fly.dev`) sirve como MVP funcional; la experiencia visual completa es la del mockup.
 
 ### Fase 1 — Limpieza de datos sensibles (2-3 días) ✅ COMPLETADA
 
@@ -791,7 +791,7 @@ gantt
 | 2.12 | Actualizar `test-e2e.js` para nueva auth JWT y datos sintéticos | 2h |
 | 2.13 | Probar localmente: login, upload, revisión, submissions, admin log | 2h |
 
-### Fase 3 — Despliegue en Fly.io (1 día) ✅ COMPLETADA — https://attestapp.fly.dev
+### Fase 3 — Despliegue en Fly.io (1 día) ✅ COMPLETADA — https://roledict.fly.dev
 
 **Objetivo:** Tener la app en producción 100% gratis y sin caducidad.
 
@@ -917,7 +917,7 @@ A continuación se listan **todos** los archivos del repositorio que requieren c
 
 ## Notas finales
 
-1. **Proveedor único: Fly.io.** Toda la app (Node.js + SQLite + archivos) corre en un solo servicio de Fly.io. El free allowance se renueva cada mes sin fecha de caducidad. **Actualmente desplegada en:** `https://attestapp.fly.dev` ✅
+1. **Proveedor único: Fly.io.** Toda la app (Node.js + SQLite + archivos) corre en un solo servicio de Fly.io. El free allowance se renueva cada mes sin fecha de caducidad. **Actualmente desplegada en:** `https://roledict.fly.dev` ✅
 
 2. **SQLite en volumen persistente.** El archivo `roledict.db` vive en `/app/data/` que es un volumen persistente de Fly.io. Sobrevive a redeploys y reinicios.
 
