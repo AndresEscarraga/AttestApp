@@ -30,8 +30,12 @@
   .upload-error { color:var(--danger); font-weight:600; }
   .upload-pending { color:var(--warning); font-weight:600; }
 </style>
+
+<script src="/shared.js"></script>
 </head>
 <body class="has-sidebar">
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
 <!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
@@ -96,7 +100,10 @@
 
 
 
+
 <div class="main">
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Data Sources</span> Search...  -->
 <!-- Topbar component — injected by build.js -->
 <!-- Placeholders: Attest › <span>Data Sources</span> Search...  -->
 <!-- Topbar component — injected by build.js -->
@@ -114,6 +121,7 @@
     <button class="topbar-btn" title="Help">?</button>
   </div>
 </header>
+
 
 
 
@@ -224,7 +232,7 @@
   var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
 })();
 </script>
-<script src="/shared.js"></script><script src="/mobile.js"></script>
+<script src="/mobile.js"></script>
 </div>
 </div>
 </div>

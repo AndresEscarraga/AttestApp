@@ -60,10 +60,11 @@ function processFile(filename) {
 
   let html = fs.readFileSync(filePath, 'utf8');
 
-  // 1. Inject shared.js into <head> if not already present
-  if (!html.includes('shared.js')) {
-    html = html.replace('</head>', '\n<script src="shared.js"></script>\n</head>');
-  }
+  // 1. ALWAYS inject shared.js into <head> so it runs before any body scripts
+  // Remove any existing shared.js references first (head or body)
+  html = html.replace(/<script\s+src=["']\/?shared\.js["']><\/script>/gi, '');
+  // Inject into head
+  html = html.replace('</head>', '\n<script src="/shared.js"></script>\n</head>');
 
   // 2. Replace existing <aside class="sidebar">...</aside> with component version
   html = html.replace(/<aside class="sidebar">[\s\S]*?<\/aside>/g, fillSidebar(config));
