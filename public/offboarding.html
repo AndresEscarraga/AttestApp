@@ -20,9 +20,25 @@
 
 
 
+
+
+
+
+
+
+
+
 <script src="/shared.js"></script>
 </head>
 <body class="has-sidebar">
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
+<!-- Sidebar component — injected by build.js -->
+<!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
 <!-- Placeholders: {{activePage}}  U User  0 0 0 -->
 <!-- Sidebar component — injected by build.js -->
@@ -50,30 +66,30 @@
   </div>
 
   <nav class="sidebar-nav">
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-min-role="auditor">
       <div class="sidebar-section-label">Overview</div>
       <a class="sidebar-item " href="/dashboard.html"><span class="item-icon">⊞</span>Dashboard</a>
-      <a class="sidebar-item " href="/campaigns.html"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
+      <a class="sidebar-item " href="/campaigns.html" data-min-role="approver"><span class="item-icon">⊟</span>Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-min-role="approver">
       <div class="sidebar-section-label">Review</div>
       <a class="sidebar-item " href="/reviews.html"><span class="item-icon">☰</span>My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>
-      <a class="sidebar-item " href="/onboarding.html"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
-      <a class="sidebar-item active" href="/offboarding.html"><span class="item-icon">⊖</span>Offboarding</a>
+      <a class="sidebar-item " href="/onboarding.html" data-min-role="admin"><span class="item-icon">⊕</span>Onboarding<span class="item-tag">NEW</span></a>
+      <a class="sidebar-item active" href="/offboarding.html" data-min-role="admin"><span class="item-icon">⊖</span>Offboarding</a>
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-min-role="auditor">
       <div class="sidebar-section-label">Audit & Compliance</div>
       <a class="sidebar-item " href="/audit-trail.html"><span class="item-icon">☷</span>Audit Trail</a>
-      <a class="sidebar-item " href="/sod.html"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>
+      <a class="sidebar-item " href="/sod.html" data-min-role="approver"><span class="item-icon">⚠</span>SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>
       <a class="sidebar-item " href="/evidence.html"><span class="item-icon">⎙</span>Evidence Locker</a>
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-min-role="admin">
       <div class="sidebar-section-label">Administration</div>
       <a class="sidebar-item " href="/data-sources.html"><span class="item-icon">⇑</span>Data Sources</a>
       <a class="sidebar-item " href="/admin-users.html"><span class="item-icon">👥</span>Users & Roles</a>
       <a class="sidebar-item " href="/tenants.html"><span class="item-icon">⊡</span>Tenants</a>
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-min-role="admin">
       <div class="sidebar-section-label">Settings</div>
       <a class="sidebar-item " href="/settings.html"><span class="item-icon">⚙</span>Configuration</a>
       <a class="sidebar-item " href="/api-keys.html"><span class="item-icon">⌘</span>API Keys</a>
@@ -122,7 +138,19 @@
 
 
 
+
+
+
+
 <div class="main">
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Offboarding</span> Search...  -->
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Offboarding</span> Search...  -->
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Offboarding</span> Search...  -->
+<!-- Topbar component — injected by build.js -->
+<!-- Placeholders: Attest › <span>Offboarding</span> Search...  -->
 <!-- Topbar component — injected by build.js -->
 <!-- Placeholders: Attest › <span>Offboarding</span> Search...  -->
 <!-- Topbar component — injected by build.js -->
@@ -157,6 +185,10 @@
     <button class="topbar-btn" title="Help">?</button>
   </div>
 </header>
+
+
+
+
 
 
 

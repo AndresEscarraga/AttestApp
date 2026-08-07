@@ -29,7 +29,8 @@
       if (!res.ok) throw new Error(me.error || 'Could not verify your access.');
       state.email = me.email || '';
       state.isAdmin = !!me.isAdmin;
-      const adminLink = adminLink;
+      // Admin link visibility handled by shared.js role-based sidebar
+      var adminLink = document.getElementById('adminLink');
       if (adminLink) adminLink.style.display = state.isAdmin ? '' : 'none';
       const params = new URLSearchParams(location.search);
       const imp = params.get('impersonate');
@@ -46,7 +47,7 @@
       updateSidebar();
       init();
     } catch (e) {
-      signedInName.textContent = 'Access denied: ' + (e.message || 'Unauthorized');
+      console.error('Access denied:', e.message || 'Unauthorized');
     }
   }
 
@@ -90,8 +91,7 @@
     if (av) av.textContent = initials;
     if (nm) nm.textContent = state.approver || 'User';
     if (rl) rl.textContent = state.isAdmin ? 'Administrator' : 'Approver';
-    const label = state.impersonated ? state.approver + ' (impersonated)' : state.approver + (state.email ? ' (' + state.email + ')' : '');
-    signedInName.textContent = 'Signed in as: ' + label;
+    // Sidebar user info also populated by shared.js
   }
 
   // Dark mode (topbar button darkToggle2)
@@ -110,25 +110,66 @@
     });
   }
 
-  // Sign out (click sidebar user area)
-  var sb = document.getElementById('sidebarUserArea');
-  if (sb) sb.addEventListener('click', function() {
-    if (confirm('Sign out?')) {
-      localStorage.removeItem('attest_token');
-      localStorage.removeItem('attest_user');
-      location.href = '/login.html';
-    }
-  });
+  // Sign out handled by shared.js user menu
 
   loadCurrentUser();
 
   // Review Table
   function init() {
+    // If admin has no approver roles, show impersonation panel
+    if (state.isAdmin && !state.impersonated && !state.approverRoles.length) {
+      showAdminImpersonationPanel();
+      updateStats();
+      return;
+    }
+
     state.approverRoles.forEach(function(r){addRow(r)});
     printBtn.addEventListener('click', onPrintAndSubmit);
     newReviewBtn.addEventListener('click', function(){location.reload()});
     addRowBtn.addEventListener('click', function(){addRow('')});
     updateStats();
+  }
+
+  function showAdminImpersonationPanel() {
+    // Fetch available approvers for impersonation
+    fetch('/api/approvers').then(function(r){return r.json();}).then(function(approvers){
+      var tbody = document.getElementById('reviewTableBody');
+      if (!tbody) return;
+
+      var approverList = (approvers || []).slice(0, 8);
+      if (!approverList.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div style="text-align:center;padding:40px"><p style="font-weight:600;margin-bottom:8px">No approvers found</p><p class="text-sm text-muted">Upload role data to populate approver profiles.</p></div></td></tr>';
+        return;
+      }
+
+      var html = '<tr><td colspan="6" style="padding:24px 20px">' +
+        '<div style="text-align:center;margin-bottom:16px">' +
+          '<div style="font-size:32px;margin-bottom:8px">👤</div>' +
+          '<h3 style="margin-bottom:4px">You are logged in as Administrator</h3>' +
+          '<p class="text-sm text-muted">Select an approver below to review and certify their assigned roles.</p>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:10px">';
+
+      approverList.forEach(function(name){
+        html += '<button class="btn btn-secondary" style="text-align:left;padding:14px 16px" ' +
+          'onclick="location.href=\'?impersonate=' + encodeURIComponent(name) + '\'">' +
+          '<span style="font-weight:600;display:block">' + name + '</span>' +
+          '<span class="text-sm text-muted">Click to review roles →</span>' +
+        '</button>';
+      });
+
+      html += '</div></td></tr>';
+      tbody.innerHTML = html;
+
+      // Update header
+      var h1 = document.querySelector('.content-header h1');
+      if (h1) h1.textContent = 'My Role Reviews';
+      var sub = document.querySelector('.content-header p');
+      if (sub) sub.textContent = 'Impersonate an approver to certify their business roles.';
+    }).catch(function(){
+      var tbody = document.getElementById('reviewTableBody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6"><div style="text-align:center;padding:40px;color:var(--text-tertiary)">Could not load approvers.</div></td></tr>';
+    });
   }
 
   function addRow(roleName) {

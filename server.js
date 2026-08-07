@@ -515,12 +515,14 @@ app.use('/vendor/jspdf-autotable', express.static(path.join(__dirname, 'node_mod
 app.get('/api/me', async (req, res) => {
   const tenants = await tenantStore.listAll();
   const currentTenant = await tenantStore.getById(req.tenantId || 'default');
+  const userRole = req.auth.isAdmin ? (await adminUserStore.getUserRole(req.auth.email) || 'admin') : 'approver';
   res.json({
     email: req.auth.email,
     approverName: req.auth.approverName,
     approverEmail: req.auth.approverName ? approverNameToEmail[req.auth.approverName] || '' : '',
     roles: req.auth.roles,
     isAdmin: req.auth.isAdmin,
+    role: userRole,
     tenantId: req.tenantId || 'default',
     tenant: currentTenant || { id: 'default', name: 'Default Organization' },
     tenants,

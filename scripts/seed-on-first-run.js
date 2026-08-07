@@ -107,11 +107,25 @@ function generateExcelFiles() {
   const wsComplete = XLSX.utils.aoa_to_sheet(completeRows);
   XLSX.utils.book_append_sheet(rolesWb, wsComplete, 'Complete');
 
-  // "Emails" sheet
+  // "Emails" sheet — map approver names to emails + admin mapping
   const emailsHeader = ['Full Name', 'Email'];
   const emailsRows = [emailsHeader];
   for (const a of approvers) {
     emailsRows.push([a.fullName, a.email]);
+  }
+  // Map admin emails to an approver so they can see reviews immediately
+  const adminEmails = ['admin.one@attest.local', 'admin.two@attest.local', 'admin.three@attest.local'];
+  for (const ae of adminEmails) {
+    const approver = approvers[adminEmails.indexOf(ae) % approvers.length];
+    emailsRows.push([approver.fullName, ae]);
+  }
+  // Map approver role emails to approvers for My Reviews access
+  emailsRows.push(['Morgan Taylor', 'approver.one@attest.local']);
+  emailsRows.push(['Casey Morrison', 'approver.two@attest.local']);
+  // Also check for real admin email from env
+  const realAdmin = process.env.DEV_AUTH_EMAIL || process.env.ADMIN_EMAIL || '';
+  if (realAdmin && realAdmin.includes('@') && !adminEmails.includes(realAdmin)) {
+    emailsRows.push([approvers[0].fullName, realAdmin]);
   }
   const wsEmails = XLSX.utils.aoa_to_sheet(emailsRows);
   XLSX.utils.book_append_sheet(rolesWb, wsEmails, 'Emails');
@@ -168,12 +182,24 @@ function seedDatabase() {
     insertTenant.run(t.id, t.name, t.plan, t.status, daysAgo(30), daysAgo(1));
   }
 
-  // Admin users
-  const admins = ['admin.one@attest.local'];
-  const insertAdmin = db.prepare('INSERT OR IGNORE INTO admin_users (email, tenant_id, protected) VALUES (?,?,?)');
-  for (const a of admins) {
-    insertAdmin.run(a, 'default', 0);
+  // Users with roles: admin, approver, auditor — password: "password123" for all
+  const bcrypt = require('bcrypt');
+  const demoPassword = bcrypt.hashSync('password123', 10);
+  const users = [
+    { email: 'admin.one@attest.local', role: 'admin', protected: 0 },
+    { email: 'admin.two@attest.local', role: 'admin', protected: 0 },
+    { email: 'approver.one@attest.local', role: 'approver', protected: 0 },
+    { email: 'approver.two@attest.local', role: 'approver', protected: 0 },
+    { email: 'auditor.one@attest.local', role: 'auditor', protected: 0 },
+    { email: 'auditor.two@attest.local', role: 'auditor', protected: 0 },
+    { email: 'superadmin.one@attest.local', role: 'admin', protected: 1 },
+    { email: 'superadmin.two@attest.local', role: 'admin', protected: 1 },
+  ];
+  const insertUser = db.prepare('INSERT OR REPLACE INTO admin_users (email, tenant_id, protected, role, password_hash) VALUES (?,?,?,?,?)');
+  for (const u of users) {
+    insertUser.run(u.email, 'default', u.protected, u.role, demoPassword);
   }
+  console.log('[seed] Users:', users.length);
 
   // Campaigns
   const campaigns = [
@@ -212,35 +238,43 @@ function seedDatabase() {
   }
   console.log('[seed] SoD Conflicts:', sodConflicts.length);
 
-  // Submissions (role reviews)
-  const actions = ['Keep Business Role', 'Modify Business Role', 'Modify Technical Role', 'Reject Business Role'];
+  // Submissions — simulate real certification workflow across approvers
+  // SOX campaign: Morgan 4/4✓, Jamie 2/3 (in progress), Casey 3/3✓, Riley 0/3, Quinn 0/2
+  // Total: 9 of 15 reviewed = 60% across 3 approvers
   const insertSubmission = db.prepare(`INSERT INTO submissions (log_entry_id, submission_id, tenant_id, timestamp, approver, submitted_by_email, impersonated, role_name, action, ritm, ritm_status, action_details, comments, rejection_reason, row_index, campaign_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
+  const workflowSubmissions = [
+    // Morgan Taylor — all 4 reviewed (100% complete)
+    { idx:1, approver:'Morgan Taylor', role:'BE - FINANCE - ACCOUNTS PAYABLE', action:'Keep Business Role', ritm:'RITM004810', ritmStatus:'Resolved', days:4, email:'approver.one@attest.local' },
+    { idx:2, approver:'Morgan Taylor', role:'BE - FINANCE - ACCOUNTS RECEIVABLE', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:3, email:'approver.one@attest.local' },
+    { idx:3, approver:'Morgan Taylor', role:'BE - FINANCE - GENERAL LEDGER', action:'Modify Business Role', ritm:'RITM004795', ritmStatus:'Open', days:3, email:'approver.one@attest.local' },
+    { idx:4, approver:'Morgan Taylor', role:'BE - PROCUREMENT - PURCHASE ORDERS', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:2, email:'approver.one@attest.local' },
+
+    // Jamie Rivera — 2 of 3 reviewed, 1 pending (67% complete)
+    { idx:5, approver:'Jamie Rivera', role:'BE - HR - EMPLOYEE DATA', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'admin.one@attest.local' },
+    { idx:6, approver:'Jamie Rivera', role:'BE - HR - PAYROLL PROCESSING', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:4, email:'admin.one@attest.local' },
+    // BE - PROCUREMENT - VENDOR MANAGEMENT → NOT reviewed (pending)
+
+    // Casey Morrison — all 3 reviewed (100% complete)
+    { idx:7, approver:'Casey Morrison', role:'BE - IT - SYSTEM ADMINISTRATOR', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:6, email:'approver.two@attest.local' },
+    { idx:8, approver:'Casey Morrison', role:'BE - IT - NETWORK ENGINEER', action:'Keep Business Role', ritm:'', ritmStatus:'Resolved', days:5, email:'approver.two@attest.local' },
+    { idx:9, approver:'Casey Morrison', role:'BE - IT - HELP DESK SUPPORT', action:'Modify Technical Role', ritm:'RITM004812', ritmStatus:'Open', days:6, email:'approver.two@attest.local' },
+  ];
+
+  // Riley Thompson (0/3) and Quinn Harrison (0/2) have no submissions yet — pending
+
   let subIdx = 0;
-  const allApprovers = ['Morgan Taylor', 'Jamie Rivera', 'Casey Morrison', 'Riley Thompson', 'Quinn Harrison'];
-  // Seed ~10 submissions (67% of 15 roles)
-  const reviewedCount = 10;
-  let reviewed = 0;
-  for (const approver of allApprovers) {
-    const rls = approverRoles[approver] || [];
-    for (const role of rls) {
-      if (reviewed < reviewedCount) {
-        subIdx++;
-        const id = String(subIdx).padStart(6, '0');
-        const ts = daysAgo(Math.floor(Math.random() * 10));
-        const action = actions[reviewed % actions.length];
-        const ritm = ['RITM004810', 'RITM004788', 'RITM004795', 'RITM004812', 'RITM004820'][subIdx % 5];
-        const ritmStatus = action === 'Keep Business Role' ? 'Resolved' : action === 'Reject Business Role' ? 'On Hold' : 'Open';
-        insertSubmission.run(
-          id + '-001', id, 'default', ts, approver, approver.toLowerCase().replace(' ', '.') + '@attest.local', 0,
-          role, action, action !== 'Keep Business Role' ? ritm : '', ritmStatus,
-          '', '', '', subIdx, 'camp_sox_q3'
-        );
-        reviewed++;
-      }
-    }
+  for (const s of workflowSubmissions) {
+    subIdx++;
+    const id = String(s.idx).padStart(6, '0');
+    const ts = daysAgo(s.days);
+    insertSubmission.run(
+      id + '-001', id, 'default', ts, s.approver, s.email, 0,
+      s.role, s.action, s.ritm, s.ritmStatus,
+      '', '', '', subIdx, 'camp_sox_q3'
+    );
   }
-  console.log('[seed] Submissions:', subIdx);
+  console.log('[seed] Submissions:', subIdx, '(Morgan 4/4✓, Jamie 2/3, Casey 3/3✓, Riley 0/3 pending, Quinn 0/2 pending)');
 
   // Evidence packages
   const evidencePackages = [

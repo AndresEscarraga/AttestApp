@@ -198,6 +198,14 @@ function getDb() {
     // Column already exists — ignore
   }
 
+  // User roles migration
+  try {
+    db.exec("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'");
+    console.log('[db] Added role column to admin_users.');
+  } catch (e) {
+    // Column already exists — ignore
+  }
+
   // Phase 5: API Keys table
   db.exec(`
     CREATE TABLE IF NOT EXISTS api_keys (

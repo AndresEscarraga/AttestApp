@@ -108,6 +108,14 @@
         if(sel){sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
       }
 
+      // Role-based sidebar visibility
+      applyRoleVisibility(me.role || (me.isAdmin ? 'admin' : 'approver'));
+      // Update sidebar role label
+      if(rl) {
+        var roleLabels = {admin:'Administrator', approver:'Approver', auditor:'Auditor'};
+        rl.textContent = roleLabels[me.role] || (me.isAdmin ? 'Administrator' : 'Approver');
+      }
+
       // Store user info globally for page scripts to use
       window.__attestUser=me;
       // Fire event so page scripts know user is loaded
@@ -240,6 +248,40 @@
 
   function escHTML(s){
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Role-based UI visibility ──
+  function applyRoleVisibility(role) {
+    var roleRank = { admin:3, approver:2, auditor:1 };
+    var userRank = roleRank[role] || 1;
+
+    // Add role class to body for CSS targeting
+    document.body.classList.add('role-' + role);
+
+    // Show/hide sidebar sections based on data-min-role
+    var sections = document.querySelectorAll('.sidebar-section[data-min-role]');
+    sections.forEach(function(section) {
+      var minRole = section.getAttribute('data-min-role');
+      var minRank = roleRank[minRole] || 3;
+      section.style.display = userRank >= minRank ? '' : 'none';
+    });
+
+    // Show/hide individual sidebar items with data-min-role
+    var items = document.querySelectorAll('.sidebar-item[data-min-role]');
+    items.forEach(function(item) {
+      var minRole = item.getAttribute('data-min-role');
+      var minRank = roleRank[minRole] || 3;
+      item.style.display = userRank >= minRank ? '' : 'none';
+    });
+
+    // Hide onboarding/offboarding nav section if empty (approver has no items in Review)
+    var reviewSection = document.querySelector('.sidebar-section[data-min-role="approver"]');
+    if (reviewSection && userRank < 2) {
+      var visibleItems = reviewSection.querySelectorAll('.sidebar-item:not([style*="display: none"])');
+      if (!visibleItems.length || (visibleItems.length === 1 && visibleItems[0].getAttribute('data-min-role') === 'admin')) {
+        reviewSection.style.display = 'none';
+      }
+    }
   }
 
   // Expose helpers globally

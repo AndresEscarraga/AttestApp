@@ -11,6 +11,10 @@ const DEFAULT_ADMIN_EMAILS = [
   'admin.six@attest.local',
   'superadmin.one@attest.local',
   'superadmin.two@attest.local',
+  'approver.one@attest.local',
+  'approver.two@attest.local',
+  'auditor.one@attest.local',
+  'auditor.two@attest.local',
 ];
 
 const PROTECTED_ADMIN_EMAILS = [
@@ -35,12 +39,15 @@ class SqliteAdminUserStore {
   _seedIfEmpty() {
     const count = this.db.prepare('SELECT COUNT(*) as cnt FROM admin_users').get();
     if (count.cnt > 0) return;
-    const insert = this.db.prepare('INSERT OR IGNORE INTO admin_users (email, protected) VALUES (?, ?)');
+    const insert = this.db.prepare('INSERT OR IGNORE INTO admin_users (email, protected, role) VALUES (?, ?, ?)');
     const seedMany = this.db.transaction((emails) => {
       for (const email of emails) {
         const normalized = normalizeEmail(email);
         const isProtected = PROTECTED_ADMIN_EMAILS.includes(normalized) ? 1 : 0;
-        insert.run(normalized, isProtected);
+        const role = normalized.includes('superadmin') ? 'admin' :
+                     normalized.includes('approver') ? 'approver' :
+                     normalized.includes('auditor') ? 'auditor' : 'admin';
+        insert.run(normalized, isProtected, role);
       }
     });
     seedMany(DEFAULT_ADMIN_EMAILS);
@@ -48,15 +55,27 @@ class SqliteAdminUserStore {
 
   async listAdmins(tenantId) {
     const tid = tenantId || 'default';
-    const rows = this.db.prepare('SELECT email FROM admin_users WHERE tenant_id = ? ORDER BY email').all(tid);
+    const rows = this.db.prepare('SELECT email, role FROM admin_users WHERE tenant_id = ? ORDER BY email').all(tid);
     return rows.map(r => r.email);
   }
 
-  async addAdmin(email, tenantId) {
+  async listAdminsWithRoles(tenantId) {
+    const tid = tenantId || 'default';
+    return this.db.prepare('SELECT email, role, protected FROM admin_users WHERE tenant_id = ? ORDER BY email').all(tid);
+  }
+
+  async getUserRole(email) {
+    const normalized = normalizeEmail(email);
+    const row = this.db.prepare('SELECT role FROM admin_users WHERE email = ?').get(normalized);
+    return row ? row.role : null;
+  }
+
+  async addAdmin(email, tenantId, role) {
     const tid = tenantId || 'default';
     const normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) throw new Error('Invalid email');
-    this.db.prepare('INSERT OR IGNORE INTO admin_users (email, tenant_id, protected) VALUES (?, ?, 0)').run(normalized, tid);
+    const userRole = role || 'admin';
+    this.db.prepare('INSERT OR IGNORE INTO admin_users (email, tenant_id, protected, role) VALUES (?, ?, 0, ?)').run(normalized, tid, userRole);
     return normalized;
   }
 
