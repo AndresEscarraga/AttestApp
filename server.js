@@ -381,8 +381,13 @@ function isPublicPath(path) {
 
 async function authMiddleware(req, res, next) {
   try {
-    if (isPublicPath(req.path)) return next();
+    // Always build auth context from token if present
     req.auth = await buildAuthContext(req);
+
+    // Public paths — let through even without auth
+    if (isPublicPath(req.path)) return next();
+
+    // Protected paths — require valid auth
     if (!req.auth.email) {
       if (req.path.startsWith('/api/')) {
         return res.status(401).json({ error: 'Authentication required.' });
@@ -408,7 +413,12 @@ function requireAdmin(req, res, next) {
 }
 
 function requireAdminPage(req, res, next) {
-  if (req.path === '/admin.html' || req.path === '/admin-users.html' || req.path === '/activity.html') {
+  const adminPages = [
+    '/admin-users.html', '/activity.html', '/audit-trail.html',
+    '/data-sources.html', '/api-keys.html', '/tenants.html',
+    '/settings.html', '/sod.html', '/evidence.html'
+  ];
+  if (adminPages.includes(req.path)) {
     return requireAdmin(req, res, next);
   }
   return next();
