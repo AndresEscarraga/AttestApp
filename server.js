@@ -407,8 +407,12 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-// ---------- Global middleware ----------
-app.use(express.json({ limit: '4mb' }));
+function requireAdmin(req, res, next) {
+  if (req.auth && req.auth.isAdmin) return next();
+  return sendAuthError(req, res, 403);
+}
+
+function recordPageAccess(req, res, next) {
   if (req.method === 'GET' && Object.prototype.hasOwnProperty.call(PAGE_ACCESS_LABELS, req.path)) {
     recordActivity({
       type: 'AUTH',
