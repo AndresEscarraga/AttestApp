@@ -193,7 +193,7 @@ function getDb() {
     { name: '004d_tenant_id_admin_users', table: 'admin_users', col: 'tenant_id', def: "'default'" },
   ];
   for (const m of tenantMigrations) {
-    migrate(m.name, `ALTER TABLE ${m.table} ADD COLUMN ${m.col} TEXT NOT NULL DEFAULT ${m.def}`);
+    migrate(m.name, `ALTER TABLE ${m.table} ADD COLUMN ${m.col} TEXT NOT NULL DEFAULT ${m.def}`, true);
   }
 
   // Create tenant indexes
@@ -203,8 +203,8 @@ function getDb() {
   `);
 
   // ── Phase 4c: Password hash + role columns ──
-  migrate('004e_admin_password_hash', "ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''");
-  migrate('004f_admin_role', "ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'");
+  migrate('004e_admin_password_hash', "ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''", true);
+  migrate('004f_admin_role', "ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'", true);
 
   // ── Phase 5: API Keys ──
   migrate('005_api_keys', `
