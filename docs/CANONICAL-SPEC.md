@@ -1,6 +1,6 @@
 # CANONICAL SYSTEM SPECIFICATIONS: ATTEST — Access Certification & Role Governance
-**Document Status:** CANONICAL / PROVISIONED (Read-Only Blueprint)  
-**Last Updated:** 2026-08-07
+**Document Status:** CANONICAL / LIVING ARCHITECTURE SPECIFICATION
+**Last Updated:** 2026-08-08
 
 ---
 
@@ -9,61 +9,37 @@
 ### 1.1 System Purpose
 Attest is a multi-tenant Governance, Risk, and Compliance (GRC) platform for enterprise access certification. It enables organizations to conduct periodic user access reviews (SOX, ITGC, ISO 27001, SOC 2, GDPR, NIST 800-53, COBIT 2019), detect Segregation of Duties (SoD) conflicts, manage employee onboarding/offboarding access lifecycles, and generate tamper-proof audit evidence packages for external auditors.
 
-### 1.2 Topology Diagram
+### 1.2 Architecture Views — Current State vs. Final State
 
-```mermaid
-graph TB
-    subgraph "Frontend Layer — Multi-Page App (MPA)"
-        A[login.html]
-        B[dashboard.html]
-        C[campaigns.html]
-        D[reviews.html]
-        E[audit-trail.html]
-        F[sod.html]
-        G[evidence.html]
-        H[data-sources.html]
-        I[admin-users.html]
-        J[tenants.html]
-        K[settings.html]
-        L[api-keys.html]
-        M[onboarding.html]
-        N[offboarding.html]
-        O[activity.html]
-    end
+The architecture is documented in two deliberately separate views. They MUST NOT be merged conceptually:
 
-    subgraph "Shared Frontend Infrastructure"
-        WC[Web Components<br/>attest-sidebar<br/>attest-topbar<br/>attest-logo<br/>attest-mobile-tabbar]
-        SJ[shared.js<br/>Auth / Dark Mode / Toast<br/>Confirm Modal / View Transitions]
-        CS[styles.css<br/>Design Tokens / Scrollbar System<br/>Skeleton Loaders / Badges]
-        SW[sw.js<br/>Service Worker<br/>Offline Cache]
-    end
+- **AS-BUILT / current state** is descriptive and is derived from the executable repository as of 2026-08-08. It is the reference for diagnosing current behavior.
+- **TO-BE / final state** is normative and represents the architecture expected after completing the pending roadmap. A component appearing there does not mean it is implemented today.
 
-    subgraph "API Layer — Node.js + Express 5"
-        MW1[JWT Auth Middleware]
-        MW2[Tenant Isolation Middleware]
-        MW3[Admin Authorization Middleware]
-        R1[routes/auth.js]
-        R2[routes/review.js]
-        R3[routes/compliance.js]
-        R4[routes/admin.js]
-        R5[routes/dashboard.js]
-    end
+Solid arrows represent synchronous calls, dashed arrows represent asynchronous or weakly coupled work, and green arrows in the target diagram represent durable persistence. Both views identify frontend, edge/session, backend, asynchronous processing, and data layers.
 
-    subgraph "Storage Layer"
-        DB[(SQLite — WAL Mode<br/>better-sqlite3<br/>data/attest.db)]
-        FS[File System<br/>data/sources/<br/>data/evidence/<br/>Reports/]
-    end
+#### 1.2.1 Current Architecture — AS-BUILT
 
-    A & B & C & D & E & F & G & H & I & J & K & L & M & N & O --> WC
-    A & B & C & D & E & F & G & H & I & J & K & L & M & N & O --> SJ
-    A & B & C & D & E & F & G & H & I & J & K & L & M & N & O --> CS
-    SJ --> SW
-    SJ --> MW1
-    MW1 --> MW2
-    MW2 --> R1 & R2 & R3 & R4 & R5
-    R1 & R2 & R3 & R4 & R5 --> DB
-    R4 --> FS
-```
+![Attest current architecture derived from code](architecture/Attest-Arquitectura-Actual.svg)
+
+The current application is a static multi-page frontend served by a single Express process. The same process authenticates users, resolves the immutable request `TenantContext`, enforces capabilities, executes domain behavior, parses source files, runs SoD detection, generates evidence, and writes through synchronous SQLite stores. SQLite, uploaded workbooks, and evidence ZIP files share one attached Fly.io volume. There is no durable queue, transactional outbox, PostgreSQL RLS, or independent object storage in the current runtime.
+
+#### 1.2.2 Final Architecture — TO-BE
+
+![Attest final target architecture after the roadmap](architecture/Attest-Arquitectura-Objetivo.svg)
+
+The target remains a **modular monolith**, not a premature collection of microservices. The HTTP application becomes stateless and horizontally scalable; PostgreSQL with RLS becomes the transactional authority; imports, campaign scope, review items, decisions, SoD evaluations, and evidence are bound to immutable tenant snapshots. A transactional outbox and durable queue drive independently scalable import, campaign, SoD, evidence, and delivery workers. Versioned object storage retains source and evidence artifacts. Enterprise identity is integrated through a BFF/session gateway and the client no longer stores a bearer session token in JavaScript-accessible storage.
+
+| Layer | Current AS-BUILT | Final TO-BE |
+|---|---|---|
+| Frontend | Static MPA, Web Components, page scripts, shared `apiClient`, JWT in `localStorage`, app-shell Service Worker | Compiled modular web app, accessible design system, centralized session/tenant provider, tenant+snapshot keyed cache, global auth/error handling |
+| Edge and session | Fly TLS proxy; local JWT/API-key authentication in the Express process | CDN/WAF/load balancer plus BFF; OIDC/SAML Authorization Code + PKCE, MFA, HttpOnly session, SCIM provisioning |
+| Authorization | Membership-derived `TenantContext` and server-side capabilities | Same invariant reinforced by RBAC + ABAC/ReBAC policy and resource-state checks |
+| Backend | One Express process with routes, rules, imports, jobs, and stores | Stateless modular monolith with platform boundaries and explicit identity, campaign, review, SoD, evidence, lifecycle, and integration modules |
+| Async work | `setImmediate`/in-process execution; no durable queue | Transactional outbox, durable queue, retry/backoff/DLQ, idempotent workers |
+| Transactional data | SQLite WAL on one Fly volume; tenant-scoped queries | PostgreSQL HA with RLS, composite foreign keys, optimistic concurrency, idempotency, PITR and restore tests |
+| Files/evidence | XLSX sources and ZIP evidence on the same local volume | Versioned object storage with tenant object keys, KMS, signed URLs, malware scanning, manifests and retention controls |
+| Audit/operations | Activity rows and process logs; basic TCP health check | Append-only audit events/checkpoints, logs/metrics/traces, readiness, SIEM/alerts, secrets/KMS and tested recovery |
 
 ### 1.3 Tech Stack Inventory
 
