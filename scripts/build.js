@@ -1,12 +1,11 @@
-// Build script — injects sidebar and topbar components into all HTML pages.
-// Uses simple find-and-replace: replaces existing sidebar/topbar with component versions.
+// Build script — injects Web Components for sidebar, topbar, mobile tabbar
+// Replaces hardcoded HTML with custom elements: <attest-sidebar>, <attest-topbar>, <attest-mobile-tabbar>
 // Run: node scripts/build.js
 
 const fs = require('fs');
 const path = require('path');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const COMPONENTS_DIR = path.join(PUBLIC_DIR, 'components');
 
 // Page configuration: filename → { activePage, breadcrumb, searchPlaceholder }
 const PAGE_CONFIG = {
@@ -26,29 +25,14 @@ const PAGE_CONFIG = {
   'activity.html':     { activePage: 'activity',     breadcrumb: 'Attest › <span>Activity Log</span>',    searchPlaceholder: 'Search activity…' },
 };
 
-// Read component templates
-const sidebarTemplate = fs.readFileSync(path.join(COMPONENTS_DIR, 'sidebar.html'), 'utf8');
-const topbarTemplate = fs.readFileSync(path.join(COMPONENTS_DIR, 'topbar.html'), 'utf8');
-
-function fillSidebar(config) {
-  let html = sidebarTemplate;
-  html = html.replace(/\{\{activePage:(\w[\w-]*)\}\}/g, (_, page) => config.activePage === page ? 'active' : '');
-  html = html.replace(/\{\{tenantOptions\}\}/g, '');
-  html = html.replace(/\{\{avatarInitial\}\}/g, 'U');
-  html = html.replace(/\{\{userName\}\}/g, 'User');
-  html = html.replace(/\{\{userRole\}\}/g, '');
-  html = html.replace(/\{\{campaignBadge\}\}/g, '0');
-  html = html.replace(/\{\{reviewBadge\}\}/g, '0');
-  html = html.replace(/\{\{sodBadge\}\}/g, '0');
-  return html;
+function sidebarTag(config) {
+  return '<attest-sidebar active="' + config.activePage + '"></attest-sidebar>';
 }
-
-function fillTopbar(config) {
-  let html = topbarTemplate;
-  html = html.replace(/\{\{breadcrumb\}\}/g, config.breadcrumb || 'Attest');
-  html = html.replace(/\{\{searchPlaceholder\}\}/g, config.searchPlaceholder || 'Search...');
-  html = html.replace(/\{\{lastUpdated\}\}/g, '');
-  return html;
+function topbarTag(config) {
+  return '<attest-topbar breadcrumb="' + config.breadcrumb.replace(/"/g, '&quot;') + '" search-placeholder="' + config.searchPlaceholder.replace(/"/g, '&quot;') + '"></attest-topbar>';
+}
+function tabbarTag(config) {
+  return '<attest-mobile-tabbar active="' + config.activePage + '"></attest-mobile-tabbar>';
 }
 
 function processFile(filename) {
@@ -60,38 +44,31 @@ function processFile(filename) {
 
   let html = fs.readFileSync(filePath, 'utf8');
 
-  // 0. CLEANUP: Remove all previously injected build artifacts to ensure idempotency
-  // Remove stale sidebar/topbar placeholder comments (accumulate on repeated builds)
-  html = html.replace(/<!-- Sidebar component — injected by build\.js -->[\s]*<!-- Placeholders:[^>]* -->[\s]*/g, '');
-  html = html.replace(/<!-- Topbar component — injected by build\.js -->[\s]*<!-- Placeholders:[^>]* -->[\s]*/g, '');
-  // Remove duplicate meta charset and viewport tags (keep only what the component injector will place)
-  // First occurrence is preserved; subsequent duplicates are stripped
-  var metaCharsetCount = 0;
-  var metaViewportCount = 0;
-  html = html.replace(/<meta\s+charset="UTF-8"[^>]*>/gi, function(match) {
-    metaCharsetCount++;
-    return metaCharsetCount === 1 ? match : '';
-  });
-  html = html.replace(/<meta\s+name="viewport"[^>]*>/gi, function(match) {
-    metaViewportCount++;
-    return metaViewportCount === 1 ? match : '';
-  });
-  // Remove any empty lines left by cleaned comments (cosmetic)
+  // 0. CLEANUP: Remove all previously injected build artifacts
+  html = html.replace(/<!-- Sidebar component[\s\S]*?Placeholders:[^>]* -->[\s]*/g, '');
+  html = html.replace(/<!-- Topbar component[\s\S]*?Placeholders:[^>]* -->[\s]*/g, '');
+  var mc = 0, mv = 0;
+  html = html.replace(/<meta\s+charset="UTF-8"[^>]*>/gi, function(m){ mc++; return mc===1?m:''; });
+  html = html.replace(/<meta\s+name="viewport"[^>]*>/gi, function(m){ mv++; return mv===1?m:''; });
   html = html.replace(/\n\s*\n\s*\n/g, '\n\n');
 
-  // 1. ALWAYS inject shared.js into <head> so it runs before any body scripts
-  // Remove any existing shared.js references first (head or body)
+  // 1. Inject scripts into <head>
   html = html.replace(/<script\s+src=["']\/?shared\.js["']><\/script>/gi, '');
-  // Inject into head
-  html = html.replace('</head>', '\n<script src="/shared.js"></script>\n</head>');
+  html = html.replace(/<script\s+src=["']\/?components\.js["']><\/script>/gi, '');
+  html = html.replace('</head>', '\n<script src="/components.js"></script>\n<script src="/shared.js"></script>\n</head>');
 
-  // 2. Replace existing <aside class="sidebar">...</aside> with component version
-  html = html.replace(/<aside class="sidebar">[\s\S]*?<\/aside>/g, fillSidebar(config));
+  // 2. Replace hardcoded sidebar with custom element
+  html = html.replace(/<aside class="sidebar">[\s\S]*?<\/aside>/g, sidebarTag(config));
 
-  // 3. Replace existing <header class="topbar">...</header> with component version
-  html = html.replace(/<header class="topbar">[\s\S]*?<\/header>/g, fillTopbar(config));
+  // 3. Replace hardcoded topbar with custom element
+  html = html.replace(/<header class="topbar">[\s\S]*?<\/header>/g, topbarTag(config));
 
-  // 4. Strip duplicate auth/fetch-override from inline scripts (shared.js handles this)
+  // 4. Add mobile tabbar before </body> (remove any existing one first)
+  html = html.replace(/<attest-mobile-tabbar[^>]*><\/attest-mobile-tabbar>/g, '');
+  html = html.replace(/<div class="mobile-tabbar">[\s\S]*?<\/div>\s*<\/div>/g, '');
+  html = html.replace('</body>', tabbarTag(config) + '\n</body>');
+
+  // 5. Strip duplicate auth/fetch-override from inline scripts
   html = html.replace(/var token\s*=\s*localStorage\.getItem\(['"]attest_token['"]\)\s*;\s*if\s*\(\s*!token\s*\)\s*\{\s*location\.href\s*=\s*['"]\/login\.html['"]\s*;?\s*\}/g, '// Auth handled by shared.js');
   html = html.replace(/var token\s*=\s*localStorage\.getItem\(['"]attest_token['"]\)\s*;\s*if\s*\(!token\)\s*\{location\.href\s*=\s*['"]\/login\.html['"]\}/g, '// Auth handled by shared.js');
   html = html.replace(/var origFetch\s*=\s*window\.fetch\s*;\s*window\.fetch\s*=\s*function\s*\(url,\s*opts\)\s*\{[\s\S]*?return origFetch\(url,\s*opts\)\s*;\s*\}\s*;/g, '// Fetch auth inject handled by shared.js');

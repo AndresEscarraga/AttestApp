@@ -37,7 +37,6 @@ const JWT_SECRET = (function() {
   console.warn('[security] Using auto-generated JWT secret for development. Set JWT_SECRET for persistence across restarts.');
   return devSecret;
 })();
-const BCRYPT_ROUNDS = 10;
 const REPORTS_DIR = process.env.REPORTS_DIR || path.join(__dirname, 'Reports');
 
 // Source data file names
@@ -57,7 +56,6 @@ const notificationStore = createNotificationStore();
 
 const UNAUTHORIZED_MESSAGE = 'You are not authorized to use this application. Please contact your system administrator.';
 const isProduction = process.env.NODE_ENV === 'production';
-const RITM_STATUS_OPTIONS = ['Open', 'Resolved', 'On Hold', 'Cancelled'];
 const MAX_TRANSACTION_ROLE_LOOKUPS = positiveIntEnv('MAX_TRANSACTION_ROLE_LOOKUPS', 500);
 const MAX_SUBMISSION_ROWS = positiveIntEnv('MAX_SUBMISSION_ROWS', 1000);
 
@@ -481,8 +479,8 @@ require('./routes')({
   txHeader, txByRole, rolesVersion, txVersion,
   recordActivity, createNotification, refreshRoles, refreshTransactions,
   generateToken, verifyToken, normalizeEmail, escapeHtml, unauthorizedHtml, sendAuthError,
-  requireAdmin, upload, JWT_SECRET, BCRYPT_ROUNDS, REPORTS_DIR, ROLES_FILE_NAME, TX_FILE_NAME,
-  UNAUTHORIZED_MESSAGE, RITM_STATUS_OPTIONS, MAX_TRANSACTION_ROLE_LOOKUPS, MAX_SUBMISSION_ROWS,
+  requireAdmin, upload, JWT_SECRET, REPORTS_DIR, ROLES_FILE_NAME, TX_FILE_NAME,
+  UNAUTHORIZED_MESSAGE, MAX_TRANSACTION_ROLE_LOOKUPS, MAX_SUBMISSION_ROWS,
   PROTECTED_ADMIN_EMAILS,
 });
 
