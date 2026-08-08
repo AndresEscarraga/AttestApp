@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1320" viewBox="0 0 1800 1320" role="img" aria-labelledby="title desc">
+  <title id="title">Attest — Arquitectura propuesta enfocada en Access Reviews y evidencia</title>
+  <desc id="desc">Arquitectura incremental que conserva en rojo los componentes útiles del estado actual y del plan, introduce en azul ajustes de alcance para pilotos y deja en gris discontinuo la infraestructura empresarial condicionada por demanda real.</desc>
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#eef6ff"/></linearGradient>
+    <linearGradient id="headBg" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#111827"/><stop offset=".55" stop-color="#16324f"/><stop offset="1" stop-color="#0f4c5c"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#0f172a" flood-opacity=".12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/></marker>
+    <style>
+      .title{font:700 30px Inter,"Segoe UI",sans-serif;fill:#fff}.subtitle{font:400 15px Inter,"Segoe UI",sans-serif;fill:#dbeafe}
+      .headerBadge{font:700 12px Inter,"Segoe UI",sans-serif;fill:#fff;letter-spacing:1.2px}.legend{font:600 12px Inter,"Segoe UI",sans-serif;fill:#e5e7eb}
+      .layer{font:700 13px Inter,"Segoe UI",sans-serif;fill:#475569;letter-spacing:1.5px}.boxTitle{font:700 16px Inter,"Segoe UI",sans-serif;fill:#111827}
+      .boxText{font:400 13px Inter,"Segoe UI",sans-serif;fill:#475569}.small{font:400 12px Inter,"Segoe UI",sans-serif;fill:#64748b}
+      .keepTag,.proposalTag,.conditionalTag{display:none}.guard{font:700 13px Inter,"Segoe UI",sans-serif;fill:#1e3a8a}
+      .panel{stroke-width:1.5}.box{fill:#fff;stroke:#cbd5e1;stroke-width:1.2;rx:12;filter:url(#shadow)}
+      .keep{fill:#fffafa;stroke:#dc2626;stroke-width:2.2;rx:12;filter:url(#shadow)}
+      .proposal{fill:#eff6ff;stroke:#2563eb;stroke-width:2.2;rx:12;filter:url(#shadow)}
+      .conditional{fill:#f8fafc;stroke:#94a3b8;stroke-width:2;stroke-dasharray:8 6;rx:12;filter:url(#shadow)}
+      .flow{fill:none;stroke:#475569;stroke-width:2;marker-end:url(#arrow)}.primary{fill:none;stroke:#2563eb;stroke-width:2.5;marker-end:url(#arrowBlue)}
+      .retainedFlow{fill:none;stroke:#dc2626;stroke-width:2.3;marker-end:url(#arrowRed)}.dash{fill:none;stroke:#64748b;stroke-width:1.8;stroke-dasharray:8 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="1800" height="1320" fill="url(#pageBg)"/>
+  <rect x="0" y="0" width="1800" height="96" fill="url(#headBg)"/>
+  <text x="42" y="38" class="title">Attest — Arquitectura propuesta enfocada en pilotos</text>
+  <text x="42" y="65" class="subtitle">Access Reviews + evidencia de auditoría · evolución incremental desde el código actual · sin construir una suite GRC/IGA completa por adelantado</text>
+  <rect x="1540" y="23" width="214" height="36" rx="18" fill="#2563eb"/><text x="1647" y="46" text-anchor="middle" class="headerBadge">PROPUESTA PRAGMÁTICA</text>
+  <rect x="1120" y="68" width="13" height="13" rx="2" fill="#fffafa" stroke="#dc2626" stroke-width="2"/><text x="1142" y="79" class="legend">SE CONSERVA</text>
+  <rect x="1270" y="68" width="13" height="13" rx="2" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/><text x="1292" y="79" class="legend">AJUSTE PROPUESTO</text>
+  <rect x="1455" y="68" width="13" height="13" rx="2" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3"/><text x="1477" y="79" class="legend">CONDICIONAL AL PILOTO</text>
+
+  <!-- Experience -->
+  <rect x="34" y="120" width="1732" height="210" rx="18" fill="#eff6ff" stroke="#93c5fd" class="panel"/>
+  <text x="58" y="148" class="layer">EXPERIENCIA · CONSERVAR LA BASE, REDUCIR EL ALCANCE</text>
+
+  <rect x="62" y="168" width="235" height="126" class="proposal"/>
+  <text x="82" y="194" class="boxTitle">Usuarios y entradas</text><text x="277" y="193" text-anchor="end" class="proposalTag">PROPUESTA</text>
+  <text x="82" y="218" class="boxText"><tspan x="82">GRC · auditor · approver</tspan><tspan x="82" dy="20">Excel / CSV primero</tspan><tspan x="82" dy="20">1 conector por necesidad real</tspan><tspan x="82" dy="20">2–3 design partners</tspan></text>
+
+  <rect x="330" y="168" width="300" height="126" class="keep"/>
+  <text x="350" y="194" class="boxTitle">MPA + Web Components</text><text x="610" y="193" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="350" y="218" class="boxText"><tspan x="350">HTML/CSS/JS existente</tspan><tspan x="350" dy="20">Sidebar · topbar · responsive</tspan><tspan x="350" dy="20">Componentes accesibles</tspan><tspan x="350" dy="20">Sin reescritura visual total</tspan></text>
+
+  <rect x="665" y="168" width="320" height="126" class="keep"/>
+  <text x="685" y="194" class="boxTitle">Session / TenantContext</text><text x="965" y="193" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="685" y="218" class="boxText"><tspan x="685">Principal + membership válida</tspan><tspan x="685" dy="20">Tenant activo y capabilities</tspan><tspan x="685" dy="20">Cambio A→B invalida estado</tspan><tspan x="685" dy="20">API sigue siendo la autoridad</tspan></text>
+
+  <rect x="1020" y="168" width="315" height="126" class="keep"/>
+  <text x="1040" y="194" class="boxTitle">apiClient + load states</text><text x="1315" y="193" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="1040" y="218" class="boxText"><tspan x="1040">401/403/404/409/422/500</tspan><tspan x="1040" dy="20">Timeout · retry · cancelación</tspan><tspan x="1040" dy="20">Errores consistentes</tspan><tspan x="1040" dy="20">Sin skeletons perpetuos</tspan></text>
+
+  <rect x="1370" y="168" width="365" height="126" class="proposal"/>
+  <text x="1390" y="194" class="boxTitle">Núcleo visible del producto</text><text x="1715" y="193" text-anchor="end" class="proposalTag">PROPUESTA</text>
+  <text x="1390" y="218" class="boxText"><tspan x="1390">Campaigns · Reviews · Evidence</tspan><tspan x="1390" dy="20">Audit Trail · Users/Roles</tspan><tspan x="1390" dy="20">SoD básico si aporta al piloto</tspan><tspan x="1390" dy="20">Ocultar módulos sólo demostrativos</tspan></text>
+  <path d="M297 231 H330" class="primary"/><path d="M630 231 H665" class="retainedFlow"/><path d="M985 231 H1020" class="retainedFlow"/><path d="M1335 231 H1370" class="primary"/>
+
+  <!-- Runtime -->
+  <rect x="34" y="360" width="1732" height="390" rx="18" fill="#f8fafc" stroke="#94a3b8" class="panel"/>
+  <text x="58" y="388" class="layer">RUNTIME AHORA · MONOLITO EXPRESS MODULAR EN UN SOLO DESPLIEGUE</text>
+
+  <rect x="62" y="420" width="250" height="132" class="keep"/>
+  <text x="82" y="447" class="boxTitle">Edge / TLS / health</text><text x="292" y="446" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="82" y="472" class="boxText"><tspan x="82">Fly.io Edge</tspan><tspan x="82" dy="20">TLS + HTTP proxy</tspan><tspan x="82" dy="20">Health/readiness</tspan><tspan x="82" dy="20">Un despliegue controlado</tspan></text>
+
+  <rect x="345" y="410" width="1390" height="310" rx="16" fill="#fff" stroke="#dc2626" stroke-width="2.2" filter="url(#shadow)"/>
+  <text x="370" y="441" class="boxTitle">Node.js + Express · monolito modular</text><text x="1710" y="440" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="370" y="463" class="small">Escala verticalmente o por réplicas sólo cuando el uso lo justifique; primero se separan responsabilidades dentro del código.</text>
+
+  <rect x="375" y="488" width="290" height="96" class="keep"/>
+  <text x="393" y="514" class="boxTitle">Plataforma HTTP</text><text x="645" y="513" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="393" y="538" class="boxText"><tspan x="393">requestId · headers · no-store</tspan><tspan x="393" dy="19">rate limit · schema validation</tspan><tspan x="393" dy="19">error contract común</tspan></text>
+
+  <rect x="690" y="488" width="305" height="96" class="keep"/>
+  <text x="708" y="514" class="boxTitle">Auth + policy</text><text x="975" y="513" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="708" y="538" class="boxText"><tspan x="708">Principal → TenantContext</tspan><tspan x="708" dy="19">RBAC/capabilities server-side</tspan><tspan x="708" dy="19">ID siempre por (tenant_id, id)</tspan></text>
+
+  <rect x="1020" y="488" width="335" height="96" class="keep"/>
+  <text x="1038" y="514" class="boxTitle">Access Review Core</text><text x="1335" y="513" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="1038" y="538" class="boxText"><tspan x="1038">Identity/account/entitlement/assignment</tspan><tspan x="1038" dy="19">Campaign snapshot + review items</tspan><tspan x="1038" dy="19">Decisiones versionadas e idempotentes</tspan></text>
+
+  <rect x="1380" y="488" width="325" height="96" class="keep"/>
+  <text x="1398" y="514" class="boxTitle">Evidence + Audit</text><text x="1685" y="513" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="1398" y="538" class="boxText"><tspan x="1398">Manifest versionado + hashes</tspan><tspan x="1398" dy="19">Export seguro server-side</tspan><tspan x="1398" dy="19">Share revocable y auditado</tspan></text>
+
+  <rect x="375" y="611" width="390" height="82" class="keep"/>
+  <text x="393" y="637" class="boxTitle">Stores / adapters</text><text x="745" y="636" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="393" y="661" class="boxText"><tspan x="393">Repositorios tenant-scoped · transacciones</tspan><tspan x="393" dy="19">Interfaz sustituible de persistencia</tspan></text>
+
+  <rect x="795" y="611" width="415" height="82" class="proposal"/>
+  <text x="813" y="637" class="boxTitle">Ejecución proporcional</text><text x="1190" y="636" text-anchor="end" class="proposalTag">PROPUESTA</text>
+  <text x="813" y="661" class="boxText"><tspan x="813">Imports, evidencia y notificaciones in-process</tspan><tspan x="813" dy="19">Idempotencia ahora; workers sólo por volumen</tspan></text>
+
+  <rect x="1240" y="611" width="465" height="82" class="proposal"/>
+  <text x="1258" y="637" class="boxTitle">Límite explícito del producto</text><text x="1685" y="636" text-anchor="end" class="proposalTag">PROPUESTA</text>
+  <text x="1258" y="661" class="boxText"><tspan x="1258">Sin lifecycle/IGA completo ni conectores masivos</tspan><tspan x="1258" dy="19">Sin SoD empresarial hasta validar demanda</tspan></text>
+
+  <path d="M825 294 V345 H187 V420" class="primary"/><path d="M312 486 H345" class="retainedFlow"/>
+  <path d="M665 536 H690" class="retainedFlow"/><path d="M995 536 H1020" class="retainedFlow"/><path d="M1355 536 H1380" class="retainedFlow"/>
+  <path d="M1188 584 V598 H570 V611" class="flow"/><path d="M765 652 H795" class="primary"/><path d="M1210 652 H1240" class="primary"/>
+
+  <!-- Data and operations -->
+  <rect x="34" y="780" width="1732" height="240" rx="18" fill="#f0fdf4" stroke="#86efac" class="panel"/>
+  <text x="58" y="808" class="layer">DATOS Y OPERACIÓN PARA DESARROLLO / PILOTOS AISLADOS</text>
+
+  <rect x="65" y="835" width="505" height="142" class="keep"/>
+  <text x="87" y="863" class="boxTitle">SQLite WAL + filesystem local</text><text x="548" y="862" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="87" y="889" class="boxText"><tspan x="87">Persistencia actual para dev/test y piloto aislado</tspan><tspan x="87" dy="21">Queries tenant-scoped + backups/restores probados</tspan><tspan x="87" dy="21">Uploads y evidencia con rutas controladas</tspan><tspan x="87" dy="21">Adapter preparado para migración futura</tspan></text>
+
+  <rect x="610" y="835" width="510" height="142" class="keep"/>
+  <text x="632" y="863" class="boxTitle">Contratos de dominio reproducibles</text><text x="1098" y="862" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="632" y="889" class="boxText"><tspan x="632">Scope de campaña como snapshot</tspan><tspan x="632" dy="21">Review items y decisiones vinculados al snapshot</tspan><tspan x="632" dy="21">Audit events y manifests con tenantId</tspan><tspan x="632" dy="21">Concurrency e idempotency donde hay mutación</tspan></text>
+
+  <rect x="1160" y="835" width="575" height="142" class="keep"/>
+  <text x="1182" y="863" class="boxTitle">Operación mínima segura desde ahora</text><text x="1713" y="862" text-anchor="end" class="keepTag">SE MANTIENE</text>
+  <text x="1182" y="889" class="boxText"><tspan x="1182">Ambientes dev/test/piloto explícitos</tspan><tspan x="1182" dy="21">Seed sólo por flag; imposible en despliegue de cliente</tspan><tspan x="1182" dy="21">Logs estructurados · secretos separados · rate limits</tspan><tspan x="1182" dy="21">Tests de aislamiento A/B + recuperación documentada</tspan></text>
+
+  <path d="M570 693 V765 H317 V835" class="retainedFlow"/><path d="M1188 584 V765 H865 V835" class="retainedFlow"/><path d="M1542 584 V765 H1448 V835" class="retainedFlow"/>
+
+  <!-- Conditional scale -->
+  <rect x="34" y="1050" width="1732" height="205" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="10 7"/>
+  <text x="58" y="1078" class="layer">GATES DESPUÉS DE PILOTOS · NO SON PRECONDICIÓN PARA VALIDAR EL PRODUCTO</text>
+
+  <rect x="65" y="1105" width="390" height="105" class="conditional"/>
+  <text x="85" y="1132" class="boxTitle">SaaS multi-tenant confirmado</text><text x="435" y="1131" text-anchor="end" class="conditionalTag">CONDICIONAL</text>
+  <text x="85" y="1158" class="boxText"><tspan x="85">PostgreSQL + RLS + HA</tspan><tspan x="85" dy="20">Object storage versionado</tspan><tspan x="85" dy="20">Migración desde adapters existentes</tspan></text>
+
+  <rect x="490" y="1105" width="390" height="105" class="conditional"/>
+  <text x="510" y="1132" class="boxTitle">Volumen o SLA confirmado</text><text x="860" y="1131" text-anchor="end" class="conditionalTag">CONDICIONAL</text>
+  <text x="510" y="1158" class="boxText"><tspan x="510">Transactional outbox + cola durable</tspan><tspan x="510" dy="20">Workers de import/evidence</tspan><tspan x="510" dy="20">Retry/backoff/DLQ</tspan></text>
+
+  <rect x="915" y="1105" width="390" height="105" class="conditional"/>
+  <text x="935" y="1132" class="boxTitle">Cliente enterprise confirmado</text><text x="1285" y="1131" text-anchor="end" class="conditionalTag">CONDICIONAL</text>
+  <text x="935" y="1158" class="boxText"><tspan x="935">OIDC/SAML/SCIM según contrato</tspan><tspan x="935" dy="20">Conectores priorizados por cliente</tspan><tspan x="935" dy="20">SoD avanzado si existe caso pagado</tspan></text>
+
+  <rect x="1340" y="1105" width="395" height="105" class="conditional"/>
+  <text x="1360" y="1132" class="boxTitle">Requisito auditor contractual</text><text x="1715" y="1131" text-anchor="end" class="conditionalTag">CONDICIONAL</text>
+  <text x="1360" y="1158" class="boxText"><tspan x="1360">KMS + retention lock/WORM</tspan><tspan x="1360" dy="20">Ledger/checkpoints firmados</tspan><tspan x="1360" dy="20">Verificador independiente</tspan></text>
+
+  <path d="M317 977 V1034 H260 V1105" class="dash"/><path d="M865 977 V1034 H685 V1105" class="dash"/><path d="M1448 977 V1034 H1110 V1105" class="dash"/><path d="M1448 977 V1034 H1538 V1105" class="dash"/>
+
+  <rect x="34" y="1275" width="1732" height="30" rx="15" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="900" y="1295" text-anchor="middle" class="guard">OBJETIVO AHORA: Import → Campaign Snapshot → Review → Decision / Remediation → Evidence / Export → Audit → aprendizaje con pilotos</text>
+</svg>
