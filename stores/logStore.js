@@ -54,6 +54,10 @@ class SqliteLogStore {
     if (filters.action)   { sql += ' AND action = @action';     params.action = filters.action; }
     if (filters.role)     { sql += ' AND role_name = @role';    params.role = filters.role; }
     sql += ' ORDER BY timestamp DESC';
+    // Pagination: default to 500 max to prevent OOM on large datasets
+    var limit = filters.limit > 0 ? Math.min(filters.limit, 1000) : 500;
+    var offset = filters.offset > 0 ? filters.offset : 0;
+    sql += ' LIMIT ' + limit + ' OFFSET ' + offset;
     const rows = this.db.prepare(sql).all(params);
     return rows.map(r => ({
       logEntryId: r.log_entry_id,

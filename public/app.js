@@ -89,6 +89,7 @@
   // Review Table
   function init() {
     var printBtn = getEl('printBtn');
+    var saveDraftBtn = getEl('saveDraftBtn');
     var newReviewBtn = getEl('newReviewBtn');
     var addRowBtn = getEl('addRowBtn');
 
@@ -100,7 +101,11 @@
     }
 
     state.approverRoles.forEach(function(r){addRow(r)});
+    // Load all technical roles in one bulk request
+    var uniqueRoles = state.approverRoles.filter(function(r){return r;});
+    if (uniqueRoles.length) loadBulkTransactions(uniqueRoles);
     if (printBtn) printBtn.addEventListener('click', onPrintAndSubmit);
+    if (saveDraftBtn) saveDraftBtn.addEventListener('click', onSaveDraft);
     if (newReviewBtn) newReviewBtn.addEventListener('click', function(){location.reload()});
     if (addRowBtn) addRowBtn.addEventListener('click', function(){addRow('')});
     updateStats();
@@ -164,7 +169,7 @@
     // Business Role
     const tdRole = document.createElement('td');
     const roleSpan = document.createElement('span'); roleSpan.className = 'role-name-cell';
-    roleSpan.innerHTML = '<strong>' + escHtml(roleName) + '</strong>';
+    roleSpan.innerHTML = '<strong>' + Attest.escHtml(roleName) + '</strong>';
     tdRole.appendChild(roleSpan); tr.appendChild(tdRole);
 
     // System
@@ -172,31 +177,14 @@
     tdSys.textContent = system; tdSys.style.fontSize = '12px';
     tr.appendChild(tdSys);
 
-    // Technical Roles (loaded async)
+    // Technical Roles (loaded in bulk after all rows added)
     const tdTech = document.createElement('td');
     tdTech.className = 'text-sm text-muted';
     tdTech.textContent = 'Loading...';
     tdTech.style.fontSize = '11px';
     tr.appendChild(tdTech);
-
-    // Load technical roles from transactions
-    fetch('/api/transactions?role=' + encodeURIComponent(roleName)).then(function(r){return r.json();}).then(function(data){
-      var techRoles = [];
-      if (data.rows && data.rows.length) {
-        // Get unique technical roles from column index 1 or 2
-        var techCol = data.header.indexOf('Technical Role');
-        if (techCol < 0) techCol = 2;
-        var seen = {};
-        data.rows.forEach(function(row){
-          var trName = String(row[techCol] || '').trim();
-          if (trName && !seen[trName]) { seen[trName] = true; techRoles.push(trName); }
-        });
-      }
-      tdTech.textContent = techRoles.length ? techRoles.slice(0,3).join(', ') + (techRoles.length > 3 ? ' (+' + (techRoles.length-3) + ')' : '') : '—';
-      if (techRoles.length >= 3) tdTech.title = techRoles.join(', ');
-      // Update View Permissions button with T-code count
-      txBtn.textContent = techRoles.length ? 'View ' + techRoles.length + ' T-codes →' : 'View Permissions →';
-    }).catch(function(){ tdTech.textContent = '—'; });
+    // Store references for bulk population
+    tr._tdTech = tdTech;
 
     // Status
     const tdStatus = document.createElement('td');
@@ -220,6 +208,8 @@
     tdTx.appendChild(txBtn); tr.appendChild(tdTx);
 
     getEl('reviewTableBody').appendChild(tr);
+    // Store txBtn reference for bulk population
+    tr._txBtn = txBtn;
 
     // SoD flagging
     if (conflictedRoles[roleName]) {
@@ -234,6 +224,48 @@
     return tr;
   }
 
+  // ── Bulk transaction loading (replaces N individual fetches) ──
+  function loadBulkTransactions(roles) {
+    fetch('/api/transactions/bulk', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({roles: roles})
+    }).then(function(r){return r.json();}).then(function(data){
+      var header = data.header || [];
+      var byRole = data.byRole || {};
+      var techCol = header.indexOf('Technical Role');
+      if (techCol < 0) techCol = 2;
+
+      var rows = document.querySelectorAll('#reviewTableBody tr');
+      rows.forEach(function(tr){
+        var roleName = tr.dataset.roleName;
+        if (!roleName || !tr._tdTech) return;
+        var txRows = byRole[roleName] || [];
+        var tdTech = tr._tdTech;
+        var txBtn = tr._txBtn;
+
+        var techRoles = [];
+        var seen = {};
+        txRows.forEach(function(row){
+          var trName = String(row[techCol] || '').trim();
+          if (trName && !seen[trName]) { seen[trName] = true; techRoles.push(trName); }
+        });
+
+        tdTech.textContent = techRoles.length ? techRoles.slice(0,3).join(', ') + (techRoles.length > 3 ? ' (+' + (techRoles.length-3) + ')' : '') : '—';
+        if (techRoles.length >= 3) tdTech.title = techRoles.join(', ');
+        if (txBtn) txBtn.textContent = techRoles.length ? 'View ' + techRoles.length + ' T-codes →' : 'View Permissions →';
+      });
+      // Restore draft after all rows populated
+      setTimeout(restoreDraft, 100);
+    }).catch(function(){
+      // Fallback: mark all as unavailable
+      var rows = document.querySelectorAll('#reviewTableBody tr');
+      rows.forEach(function(tr){
+        if (tr._tdTech) tr._tdTech.textContent = '—';
+      });
+    });
+  }
+
   function opt(value, text) { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; }
 
   function onActionChange(tr, action, tdStatus) {
@@ -245,7 +277,7 @@
       if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-success">Keep</span>';
     } else if (action) {
       tr.dataset.confirmedAction = '';
-      if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-info">' + escHtml(action) + '</span>';
+      if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-info">' + Attest.escHtml(action) + '</span>';
     } else {
       tr.dataset.confirmedAction = '';
       if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-warning">Pending</span>';
@@ -259,7 +291,7 @@
     const ex = document.getElementById('txModal'); if (ex) ex.remove();
     const backdrop = document.createElement('div'); backdrop.id = 'txModal'; backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = '<div class=modal-wide style="background:var(--bg-surface);border-radius:12px;box-shadow:var(--shadow-md);width:900px;max-width:94vw;max-height:85vh;overflow-y:auto;margin:auto">' +
-      '<div style="padding:18px 22px 0;display:flex;justify-content:space-between;align-items:center"><h3>Permissions — ' + escHtml(roleName) + '</h3><button class=modal-close>&times;</button></div>' +
+      '<div style="padding:18px 22px 0;display:flex;justify-content:space-between;align-items:center"><h3>Permissions — ' + Attest.escHtml(roleName) + '</h3><button class=modal-close>&times;</button></div>' +
       '<div style="padding:18px 22px"><p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px"><strong>Reviewer notice.</strong> Please read every permission carefully before continuing.</p>' +
       '<div class=table-scroll style=max-height:50vh><table class=data-table id=txTable><thead></thead><tbody></tbody></table></div>' +
       '<div style="margin-top:14px;padding:12px;border-top:2px solid var(--accent);background:var(--bg-root);border-radius:0 0 8px 8px">' +
@@ -299,9 +331,9 @@
     const role = tr.dataset.roleName || '';
     const backdrop = document.createElement('div'); backdrop.id = 'actionModal'; backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = '<div class=modal>' +
-      '<div class=modal-header><h3>Action Details — ' + escHtml(role) + '</h3><button class=modal-close>&times;</button></div>' +
+      '<div class=modal-header><h3>Action Details — ' + Attest.escHtml(role) + '</h3><button class=modal-close>&times;</button></div>' +
       '<div class=modal-body><p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">Enter the details required.</p>' +
-      '<textarea id=actionDetailsInput rows=4 style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;resize:vertical">' + escHtml(currentValue) + '</textarea>' +
+      '<textarea id=actionDetailsInput rows=4 style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;resize:vertical">' + Attest.escHtml(currentValue) + '</textarea>' +
       '<div class=modal-error id=actionModalError></div></div>' +
       '<div class=modal-footer><button class="btn btn-secondary" id=actionCancel>Cancel</button><button class="btn btn-primary" id=actionConfirm>Save</button></div></div>';
     document.body.appendChild(backdrop);
@@ -327,6 +359,11 @@
     if (unack.length) { submitWarning.textContent=unack.length+' role(s) need permission acknowledgement.'; return; }
     const noAct = rows.filter(function(r){return r.roleName&&!r.confirmedAction});
     if (noAct.length) { submitWarning.textContent=noAct.length+' role(s) need an action selected.'; return; }
+
+    // Show confirmation modal before submitting
+    var confirmed = await showSubmitConfirmModal(rows.filter(function(r){return r.roleName}));
+    if (!confirmed) return;
+
     state.submitting=true; submitWarning.textContent='';
     try {
       const res = await fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approver:state.approver,rows:rows.filter(function(r){return r.roleName})})});
@@ -334,6 +371,39 @@
       if (!res.ok) throw new Error(result.error||'Submission failed');
       const modal = completionModal; completionDetail.textContent='Submission ID: '+(result.submissionId||'N/A'); modal.classList.remove('hidden');
     } catch(e) { submitWarning.textContent='Error: '+e.message; } finally { state.submitting=false; }
+  }
+
+  // Confirmation modal before submitting certification
+  function showSubmitConfirmModal(rows) {
+    return new Promise(function(resolve) {
+      var ex = document.getElementById('confirmSubmitModal'); if (ex) ex.remove();
+      var keepCount = rows.filter(function(r){return r.action==='Keep Business Role'}).length;
+      var rejectCount = rows.filter(function(r){return r.action==='Reject Business Role'}).length;
+      var modifyCount = rows.length - keepCount - rejectCount;
+
+      var backdrop = document.createElement('div'); backdrop.id = 'confirmSubmitModal'; backdrop.className = 'modal-backdrop';
+      var summaryHtml = '<div style="font-size:12px;color:var(--text-secondary);margin:8px 0 12px">';
+      if (keepCount) summaryHtml += '<span class="badge badge-success" style="margin-right:6px">' + keepCount + ' Keep</span>';
+      if (modifyCount) summaryHtml += '<span class="badge badge-info" style="margin-right:6px">' + modifyCount + ' Modify</span>';
+      if (rejectCount) summaryHtml += '<span class="badge badge-danger">' + rejectCount + ' Reject</span>';
+      summaryHtml += '</div>';
+
+      backdrop.innerHTML = '<div class=modal>' +
+        '<div class=modal-header><h3>Confirm Certification Submission</h3><button class=modal-close>&times;</button></div>' +
+        '<div class=modal-body>' +
+          '<p style="font-size:13px;margin-bottom:4px">You are about to certify <strong>' + rows.length + '</strong> role(s) for <strong>' + Attest.escHtml(state.approver) + '</strong>.</p>' +
+          summaryHtml +
+          '<p style="font-size:11px;color:var(--text-tertiary);margin-top:12px;padding:10px;background:var(--warning-light);border-radius:6px;border-left:3px solid var(--warning)">⚠ This action creates an auditable record. Please verify all selections before continuing.</p>' +
+          '<div class=modal-error id=confirmModalError></div></div>' +
+        '<div class=modal-footer><button class="btn btn-secondary" id=confirmCancel>Go Back</button><button class="btn btn-primary" id=confirmSubmit>Submit Certification</button></div></div>';
+      document.body.appendChild(backdrop);
+
+      backdrop.querySelector('.modal-close').addEventListener('click',function(){backdrop.remove();resolve(false);});
+      backdrop.querySelector('#confirmCancel').addEventListener('click',function(){backdrop.remove();resolve(false);});
+      backdrop.querySelector('#confirmSubmit').addEventListener('click',function(){backdrop.remove();resolve(true);});
+      // Close on backdrop click
+      backdrop.addEventListener('click',function(e){if(e.target===backdrop){backdrop.remove();resolve(false);}});
+    });
   }
 
   // Stats
@@ -362,9 +432,7 @@
     if (warn) warn.textContent = ack === total ? 'All permissions acknowledged. Ready to submit.' : (total - ack) + ' of ' + total + ' roles need permission review.';
   }
 
-  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-  // Tenant selector
+  // escHtml provided by shared.js as Attest.escHtml
   fetch('/api/me').then(function(r){return r.json();}).then(function(me){
     var sel = document.getElementById('tenantSelector');
     if (sel && me.tenants && me.tenants.length > 1) {
@@ -376,4 +444,59 @@
       });
     }
   }).catch(function(){});
+
+  // ── Save Draft: persist current selections to localStorage ──
+  function onSaveDraft() {
+    var rows = document.querySelectorAll('#reviewTableBody tr');
+    var draft = [];
+    rows.forEach(function(tr) {
+      if (!tr.dataset.roleName) return;
+      var sel = tr.querySelector('select');
+      draft.push({
+        roleName: tr.dataset.roleName,
+        action: sel ? sel.value : '',
+        txAcknowledged: tr.dataset.txAcknowledged === 'true'
+      });
+    });
+    var key = 'attest_draft_' + (state.approver || 'unknown');
+    localStorage.setItem(key, JSON.stringify(draft));
+    if (window.Attest && Attest.showToast) Attest.showToast('Draft saved — ' + draft.length + ' role(s) preserved.', 'success');
+  }
+
+  // ── Restore draft from localStorage on load ──
+  function restoreDraft() {
+    var key = 'attest_draft_' + (state.approver || 'unknown');
+    var raw = localStorage.getItem(key);
+    if (!raw) return;
+    try {
+      var draft = JSON.parse(raw);
+      if (!Array.isArray(draft)) return;
+      draft.forEach(function(d) {
+        var tr = document.querySelector('#reviewTableBody tr[data-role-name="' + d.roleName.replace(/"/g, '\\"') + '"]');
+        if (!tr) return;
+        if (d.action) {
+          var sel = tr.querySelector('select');
+          if (sel) { sel.value = d.action; sel.dispatchEvent(new Event('change')); }
+        }
+        if (d.txAcknowledged) {
+          tr.dataset.txAcknowledged = 'true';
+          var btn = tr.querySelector('.btn-ghost');
+          if (btn) { btn.classList.add('acknowledged'); btn.textContent = 'Permissions \u2713'; }
+        }
+      });
+      updateStats();
+      if (window.Attest && Attest.showToast) Attest.showToast('Draft restored — ' + draft.length + ' role(s) loaded.', 'info');
+    } catch(e) { /* ignore corrupt draft */ }
+  }
+
+  // ── Search: filter review rows by role name or system ──
+  document.addEventListener('attest:search', function(e) {
+    var q = (e.detail.query || '').toLowerCase();
+    var rows = document.querySelectorAll('#reviewTableBody tr');
+    rows.forEach(function(tr) {
+      if (!tr.dataset.roleName) return;
+      var text = (tr.dataset.roleName + ' ' + (tr.cells[1] ? tr.cells[1].textContent : '')).toLowerCase();
+      tr.classList.toggle('search-hidden', q && text.indexOf(q) === -1);
+    });
+  });
 })();

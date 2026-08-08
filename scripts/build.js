@@ -60,6 +60,25 @@ function processFile(filename) {
 
   let html = fs.readFileSync(filePath, 'utf8');
 
+  // 0. CLEANUP: Remove all previously injected build artifacts to ensure idempotency
+  // Remove stale sidebar/topbar placeholder comments (accumulate on repeated builds)
+  html = html.replace(/<!-- Sidebar component — injected by build\.js -->[\s]*<!-- Placeholders:[^>]* -->[\s]*/g, '');
+  html = html.replace(/<!-- Topbar component — injected by build\.js -->[\s]*<!-- Placeholders:[^>]* -->[\s]*/g, '');
+  // Remove duplicate meta charset and viewport tags (keep only what the component injector will place)
+  // First occurrence is preserved; subsequent duplicates are stripped
+  var metaCharsetCount = 0;
+  var metaViewportCount = 0;
+  html = html.replace(/<meta\s+charset="UTF-8"[^>]*>/gi, function(match) {
+    metaCharsetCount++;
+    return metaCharsetCount === 1 ? match : '';
+  });
+  html = html.replace(/<meta\s+name="viewport"[^>]*>/gi, function(match) {
+    metaViewportCount++;
+    return metaViewportCount === 1 ? match : '';
+  });
+  // Remove any empty lines left by cleaned comments (cosmetic)
+  html = html.replace(/\n\s*\n\s*\n/g, '\n\n');
+
   // 1. ALWAYS inject shared.js into <head> so it runs before any body scripts
   // Remove any existing shared.js references first (head or body)
   html = html.replace(/<script\s+src=["']\/?shared\.js["']><\/script>/gi, '');

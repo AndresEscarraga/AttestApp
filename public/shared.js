@@ -28,7 +28,7 @@
     document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
     localStorage.setItem('attest_theme',isDark?'light':'dark');
     var btns=document.querySelectorAll('.dark-toggle,.topbar-btn[id*="darkToggle"]');
-    for(var i=0;i<btns.length;i++)btns[i].textContent=isDark?'🌙':'☀️';
+    for(var i=0;i<btns.length;i++)btns[i].textContent=isDark?'☀️':'🌙';
     // Update theme label in user menu
     var tl=document.getElementById('menuThemeLabel');
     if(tl)tl.textContent=isDark?'Light':'Dark';
@@ -134,6 +134,18 @@
 
     // Init notifications
     initNotifications();
+
+    // Init search
+    initSearch();
+
+    // Init language selector
+    initLangSelector();
+
+    // Init help button
+    initHelp();
+
+    // Init table sorting on sortable headers
+    initTableSort();
   });
 
   // ── Notifications System ──
@@ -284,9 +296,149 @@
     }
   }
 
+  // ── Global Search Handler ──
+  var searchDebounce = null;
+  function initSearch() {
+    var searchInput = document.querySelector('.topbar-search input');
+    if (!searchInput) return;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchDebounce);
+      var query = searchInput.value.trim();
+      searchDebounce = setTimeout(function() {
+        document.dispatchEvent(new CustomEvent('attest:search', { detail: { query: query } }));
+      }, 200);
+    });
+    // Clear search on Escape
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+    });
+  }
+
+  // ── Toast Notification System ──
+  var toastTimer = null;
+  function showToast(message, type) {
+    var existing = document.getElementById('attestToast');
+    if (existing) existing.remove();
+    clearTimeout(toastTimer);
+    type = type || 'info';
+    var colors = { success: 'var(--success)', error: 'var(--danger)', warning: 'var(--warning)', info: 'var(--accent)' };
+    var icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+    var toast = document.createElement('div');
+    toast.id = 'attestToast';
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = '<span class="toast-icon">' + (icons[type] || 'ℹ') + '</span><span class="toast-msg">' + Attest.escHtml(message) + '</span>' +
+      '<button class="toast-close" onclick="this.parentNode.remove()">&times;</button>';
+    document.body.appendChild(toast);
+    toastTimer = setTimeout(function() { if (toast.parentNode) toast.remove(); }, 5000);
+  }
+
+  // ── Retry wrapper for fetch ──
+  function fetchWithRetry(url, opts, maxRetries) {
+    maxRetries = maxRetries || 2;
+    opts = opts || {};
+    return new Promise(function(resolve, reject) {
+      var attempt = 0;
+      function tryFetch() {
+        attempt++;
+        window.fetch(url, opts).then(function(res) {
+          if (!res.ok && attempt <= maxRetries) throw new Error('HTTP ' + res.status);
+          resolve(res);
+        }).catch(function(err) {
+          if (attempt <= maxRetries) {
+            setTimeout(tryFetch, 1000 * attempt);
+          } else {
+            reject(err);
+          }
+        });
+      }
+      tryFetch();
+    });
+  }
+
+  // ── Language Selector ──
+  function initLangSelector() {
+    var sel = document.getElementById('langSelect');
+    if (!sel) return;
+    sel.addEventListener('change', function() {
+      var val = sel.value;
+      if (val === 'ES') {
+        showToast('Idioma español próximamente — Spanish coming soon', 'info');
+        sel.value = 'EN';
+      }
+    });
+  }
+
+  // ── Help Modal ──
+  function initHelp() {
+    var helpBtn = document.querySelector('.topbar-btn[title="Help"]');
+    if (!helpBtn) return;
+    helpBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showHelpModal();
+    });
+  }
+
+  function showHelpModal() {
+    var existing = document.getElementById('helpModal');
+    if (existing) { existing.remove(); return; }
+    var backdrop = document.createElement('div');
+    backdrop.id = 'helpModal';
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = '<div class="modal" style="max-width:520px">' +
+      '<div class="modal-header"><h3>Help &amp; Keyboard Shortcuts</h3><button class="modal-close">&times;</button></div>' +
+      '<div class="modal-body" style="font-size:13px;line-height:1.6">' +
+        '<p style="margin-bottom:12px"><strong>Attest</strong> is an access certification &amp; role governance tool for compliance teams.</p>' +
+        '<div style="background:var(--bg-root);border-radius:8px;padding:12px 16px;margin-bottom:12px">' +
+          '<div style="font-weight:700;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-tertiary)">Keyboard Shortcuts</div>' +
+          '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px">' +
+            '<span style="font-family:monospace;background:var(--border);padding:1px 6px;border-radius:3px;font-weight:600">Ctrl+Shift+D</span><span>Toggle dark mode</span>' +
+            '<span style="font-family:monospace;background:var(--border);padding:1px 6px;border-radius:3px;font-weight:600">Esc</span><span>Clear search</span>' +
+          '</div>' +
+        '</div>' +
+        '<p style="font-size:11px;color:var(--text-tertiary)">For support, contact your system administrator.</p>' +
+      '</div>' +
+      '<div class="modal-footer"><button class="btn btn-primary" id="helpClose">Got it</button></div>' +
+    '</div>';
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('.modal-close').addEventListener('click', function(){backdrop.remove();});
+    backdrop.querySelector('#helpClose').addEventListener('click', function(){backdrop.remove();});
+    backdrop.addEventListener('click', function(e){ if(e.target===backdrop) backdrop.remove(); });
+  }
+
+  // ── Table Column Sorting ──
+  function initTableSort() {
+    document.addEventListener('click', function(e) {
+      var th = e.target.closest('th.sortable');
+      if (!th) return;
+      var table = th.closest('table');
+      var tbody = table ? table.querySelector('tbody') : null;
+      if (!tbody) return;
+      var colIndex = Array.from(th.parentNode.children).indexOf(th);
+      var isAsc = th.getAttribute('data-sort') !== 'asc';
+      // Update sort indicators
+      th.closest('thead').querySelectorAll('th').forEach(function(h) { h.removeAttribute('data-sort'); });
+      th.setAttribute('data-sort', isAsc ? 'asc' : 'desc');
+      // Sort rows
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function(a, b) {
+        var aVal = (a.cells[colIndex] ? a.cells[colIndex].textContent : '').trim().toLowerCase();
+        var bVal = (b.cells[colIndex] ? b.cells[colIndex].textContent : '').trim().toLowerCase();
+        // Numeric comparison if both are numbers
+        var aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum) && aVal === String(aNum) && bVal === String(bNum)) {
+          return isAsc ? aNum - bNum : bNum - aNum;
+        }
+        return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      rows.forEach(function(row) { tbody.appendChild(row); });
+    });
+  }
+
   // Expose helpers globally
   window.Attest={};
   window.Attest.fmtDate=function(iso){try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return iso;}};
-  window.Attest.escHtml=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  window.Attest.escHtml=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
   window.Attest.el=function(id){return document.getElementById(id);};
+  window.Attest.showToast=showToast;
+  window.Attest.fetchWithRetry=fetchWithRetry;
 })();

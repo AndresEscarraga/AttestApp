@@ -22,7 +22,24 @@ function getDb() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  // Create tables if they don't exist
+  // ── Migrations tracking table ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Helper: run a migration only once
+  function migrate(name, sql) {
+    const exists = db.prepare("SELECT name FROM _migrations WHERE name = ?").get(name);
+    if (exists) return;
+    db.exec(sql);
+    db.prepare("INSERT INTO _migrations (name) VALUES (?)").run(name);
+    console.log('[db] Migration applied: ' + name);
+  }
+
+  // ── Core tables ──
   db.exec(`
     CREATE TABLE IF NOT EXISTS submissions (
       log_entry_id TEXT PRIMARY KEY,
@@ -86,16 +103,11 @@ function getDb() {
     -- Add campaign_id to submissions if it doesn't exist (safe migration)
   `);
 
-  // Safe migration: add campaign_id column to submissions if it doesn't exist
-  try {
-    db.exec("ALTER TABLE submissions ADD COLUMN campaign_id TEXT DEFAULT ''");
-    console.log('[db] Added campaign_id column to submissions.');
-  } catch (e) {
-    // Column already exists — ignore
-  }
+  // ── Phase 2b: Add campaign_id to submissions ──
+  migrate('002b_campaign_id', "ALTER TABLE submissions ADD COLUMN campaign_id TEXT DEFAULT ''");
 
-  // Phase 3: SoD tables + Evidence table
-  db.exec(`
+  // ── Phase 3: SoD Rules + Conflicts + Evidence ──
+  migrate('003_sod_evidence', `
     CREATE TABLE IF NOT EXISTS sod_rules (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'default',
@@ -108,7 +120,6 @@ function getDb() {
       created_by TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-
     CREATE INDEX IF NOT EXISTS idx_sod_rules_severity ON sod_rules(severity);
 
     CREATE TABLE IF NOT EXISTS sod_conflicts (
@@ -126,7 +137,6 @@ function getDb() {
       mitigated_at TEXT NOT NULL DEFAULT '',
       mitigation_notes TEXT NOT NULL DEFAULT ''
     );
-
     CREATE INDEX IF NOT EXISTS idx_sod_conflicts_status ON sod_conflicts(status);
     CREATE INDEX IF NOT EXISTS idx_sod_conflicts_approver ON sod_conflicts(approver_name);
 
@@ -143,12 +153,11 @@ function getDb() {
       share_token TEXT NOT NULL DEFAULT '',
       share_expires_at TEXT NOT NULL DEFAULT ''
     );
-
     CREATE INDEX IF NOT EXISTS idx_evidence_packages_campaign ON evidence_packages(campaign_id);
   `);
 
-  // Phase 4: Multi-tenant — tenants table + tenant_id migrations
-  db.exec(`
+  // ── Phase 4: Tenants ──
+  migrate('004_tenants', `
     CREATE TABLE IF NOT EXISTS tenants (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -160,28 +169,14 @@ function getDb() {
     );
   `);
 
-  // Seed default tenant if not exists
-  const defaultTenant = db.prepare("SELECT id FROM tenants WHERE id = 'default'").get();
-  if (!defaultTenant) {
-    db.prepare("INSERT INTO tenants (id, name, plan, status) VALUES (?, ?, ?, ?)")
-      .run('default', 'Default Organization', 'starter', 'active');
-    console.log('[db] Seeded default tenant.');
-  }
-
-  // Safe migrations: add tenant_id to core tables
+  // ── Phase 4b: Tenant ID columns ──
   const tenantMigrations = [
-    { table: 'submissions', col: 'tenant_id', def: "'default'" },
-    { table: 'activity', col: 'tenant_id', def: "'default'" },
-    { table: 'admin_users', col: 'tenant_id', def: "'default'" },
+    { name: '004b_tenant_id_submissions', table: 'submissions', col: 'tenant_id', def: "'default'" },
+    { name: '004c_tenant_id_activity', table: 'activity', col: 'tenant_id', def: "'default'" },
+    { name: '004d_tenant_id_admin_users', table: 'admin_users', col: 'tenant_id', def: "'default'" },
   ];
-
   for (const m of tenantMigrations) {
-    try {
-      db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.col} TEXT NOT NULL DEFAULT ${m.def}`);
-      console.log(`[db] Added ${m.col} column to ${m.table}.`);
-    } catch (e) {
-      // Column already exists — ignore
-    }
+    migrate(m.name, `ALTER TABLE ${m.table} ADD COLUMN ${m.col} TEXT NOT NULL DEFAULT ${m.def}`);
   }
 
   // Create tenant indexes
@@ -190,24 +185,12 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_activity_tenant ON activity(tenant_id);
   `);
 
-  // Safe migration: add password_hash to admin_users
-  try {
-    db.exec("ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''");
-    console.log('[db] Added password_hash column to admin_users.');
-  } catch (e) {
-    // Column already exists — ignore
-  }
+  // ── Phase 4c: Password hash + role columns ──
+  migrate('004e_admin_password_hash', "ALTER TABLE admin_users ADD COLUMN password_hash TEXT DEFAULT ''");
+  migrate('004f_admin_role', "ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'");
 
-  // User roles migration
-  try {
-    db.exec("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin'");
-    console.log('[db] Added role column to admin_users.');
-  } catch (e) {
-    // Column already exists — ignore
-  }
-
-  // Phase 5: API Keys table
-  db.exec(`
+  // ── Phase 5: API Keys ──
+  migrate('005_api_keys', `
     CREATE TABLE IF NOT EXISTS api_keys (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'default',
@@ -223,8 +206,8 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id);
   `);
 
-  // Phase 5.1: Notifications table
-  db.exec(`
+  // ── Phase 5.1: Notifications ──
+  migrate('005b_notifications', `
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'default',

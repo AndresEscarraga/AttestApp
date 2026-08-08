@@ -25,7 +25,18 @@ const { createNotificationStore } = require('./stores/notificationStore');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = (function() {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET environment variable is required in production.');
+    process.exit(1);
+  }
+  // Dev only: generate a random secret so tokens survive restarts within a session
+  const crypto = require('crypto');
+  const devSecret = crypto.randomBytes(32).toString('hex');
+  console.warn('[security] Using auto-generated JWT secret for development. Set JWT_SECRET for persistence across restarts.');
+  return devSecret;
+})();
 const BCRYPT_ROUNDS = 10;
 const REPORTS_DIR = process.env.REPORTS_DIR || path.join(__dirname, 'Reports');
 
@@ -152,12 +163,11 @@ function hasRoleAccess(ctx, role) {
 }
 
 async function nextSubmissionId() {
-  const entries = await logStore.readAll();
-  const maxId = entries.reduce((max, entry) => {
-    const id = String(entry.submissionId || '').trim();
-    if (!/^\d{6}$/.test(id)) return max;
-    return Math.max(max, Number(id));
-  }, 0);
+  const db = require('./stores/db').getDb();
+  const row = db.prepare(
+    "SELECT MAX(CAST(submission_id AS INTEGER)) as max_id FROM submissions WHERE submission_id GLOB '[0-9][0-9][0-9][0-9][0-9][0-9]'"
+  ).get();
+  const maxId = row && row.max_id ? Number(row.max_id) : 0;
   return String(maxId + 1).padStart(6, '0');
 }
 
