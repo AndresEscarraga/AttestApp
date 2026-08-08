@@ -755,6 +755,7 @@ select.ritm-status:disabled { opacity:.45; background:var(--bg-root); border-sty
 .toast-msg { flex: 1; min-width: 0; line-height: 1.4; }
 .toast-close { flex-shrink: 0; width: 24px; height: 24px; border: none; background: transparent; cursor: pointer; color: var(--text-tertiary); font-size: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
 .toast-close:hover { background: var(--bg-root); color: var(--text-primary); }
+.attest-load-error { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0; padding:12px 14px; border:1px solid color-mix(in srgb, var(--danger) 42%, var(--border)); border-radius:8px; background:color-mix(in srgb, var(--danger) 9%, var(--bg-card)); color:var(--text-primary); font-size:13px; }
 @media(max-width:768px) {
   .toast { left: 12px; right: 12px; bottom: 80px; max-width: none; }
 }

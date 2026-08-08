@@ -63,50 +63,33 @@
   </div>
 <script>
 (function() {
-  var el=function(id){return document.getElementById(id);};
+  var state={canManage:false};
   // Auth handled by shared.js
 // Fetch auth inject handled by shared.js
 
-  // Load user
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var initials=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=initials;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
-
-  // Dark mode (topbar button)
-  var dt2=el('darkToggle2');
-  if(dt2){
-    var saved=localStorage.getItem('attest_theme');
-    if(saved==='dark'){document.documentElement.setAttribute('data-theme','dark');dt2.textContent='☀️';}
-    dt2.addEventListener('click',function(){
-      var isDark=document.documentElement.getAttribute('data-theme')==='dark';
-      document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
-      dt2.textContent=isDark?'🌙':'☀️';
-      localStorage.setItem('attest_theme',isDark?'light':'dark');
-    });
-  }
-
-  // Sign out handled by shared.js user menu
-
   // Load settings from API
-  fetch('/api/settings').then(function(r){return r.json();}).then(function(settings){
+  function loadSettings(){return Attest.api.json('/api/settings').then(function(settings){
     var toggles=document.querySelectorAll('.toggle[data-key]');
     toggles.forEach(function(t){
       var key=t.getAttribute('data-key');
       if(settings[key])t.classList.add('on');
       else t.classList.remove('on');
+      t.disabled=!state.canManage;
     });
-  }).catch(function(){});
+  }).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load settings.',loadSettings);});}
 
   // Toggle setting via API
   window.toggleSetting=function(btn){
+    if(!state.canManage)return;
     btn.classList.toggle('on');
     var key=btn.getAttribute('data-key');
     var value=btn.classList.contains('on');
-    fetch('/api/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,value:value})}).catch(function(){});
+    btn.disabled=true;
+    Attest.api.fetch('/api/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,value:value})})
+      .catch(function(err){btn.classList.toggle('on');Attest.showToast(err.message||'Could not save setting.','error');})
+      .finally(function(){btn.disabled=!state.canManage;});
   };
+  Attest.getCurrentUser().then(function(){state.canManage=Attest.hasCapability('settings:manage');return loadSettings();}).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load settings.',function(){location.reload();});});
 })();
 </script>
 <script src="/mobile.js"></script>

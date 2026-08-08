@@ -32,7 +32,10 @@ class EvidenceStore {
     const generatedAt = new Date().toISOString();
     const safeName = name.replace(/[^a-z0-9_-]/gi, '_').substring(0, 80);
     const zipName = `${safeName}_${id}.zip`;
-    const zipPath = path.join(EVIDENCE_DIR, zipName);
+    if (!/^[a-zA-Z0-9_-]+$/.test(tid)) throw new Error('Invalid tenantId for evidence path');
+    const tenantEvidenceDir = path.join(EVIDENCE_DIR, tid);
+    ensureDir(tenantEvidenceDir);
+    const zipPath = path.join(tenantEvidenceDir, zipName);
 
     const zip = new AdmZip();
 
@@ -128,7 +131,11 @@ class EvidenceStore {
     const tid = requireTenantId(tenantId);
     const pkg = await this.getById(id, tid);
     if (pkg && fs.existsSync(pkg.file_path)) {
-      try { fs.unlinkSync(pkg.file_path); } catch {}
+      try { fs.unlinkSync(pkg.file_path); }
+      catch (err) {
+        err.message = `Could not remove evidence file for ${id}: ${err.message}`;
+        throw err;
+      }
     }
     const result = this.db.prepare('DELETE FROM evidence_packages WHERE id = ? AND tenant_id = ?').run(id, tid);
     return result.changes > 0;

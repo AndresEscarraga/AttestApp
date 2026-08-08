@@ -8,6 +8,8 @@ module.exports = function register(deps) {
     generateToken,
     normalizeEmail,
   } = deps;
+  const { capabilitiesForRole } = require('../security/capabilities');
+  const BOOTSTRAP_TENANT_ID = process.env.BOOTSTRAP_TENANT_ID || 'default';
 
   // POST /api/auth — unified login + signup
   app.post('/api/auth', async (req, res) => {
@@ -19,14 +21,14 @@ module.exports = function register(deps) {
       }
 
       if (action === 'signup') {
-        const admins = await adminUserStore.listAdmins('default');
+        const admins = await adminUserStore.listAdmins(BOOTSTRAP_TENANT_ID);
         if (admins.length > 0) {
           return res.status(403).json({ error: 'Registration is closed. Contact your administrator for an account.' });
         }
         if (!name || name.trim().length < 2) {
           return res.status(400).json({ error: 'Name is required (min 2 characters).' });
         }
-        await adminUserStore.addMembership(normalizedEmail, 'default', 'admin', {
+        await adminUserStore.addMembership(normalizedEmail, BOOTSTRAP_TENANT_ID, 'admin', {
           displayName: name.trim(),
         });
         await adminUserStore.setPassword(normalizedEmail, password);
@@ -40,9 +42,12 @@ module.exports = function register(deps) {
         return res.status(403).json({ error: 'This account has no active tenant membership.' });
       }
       const requestedTenantId = String(req.body.tenant_id || '').trim();
-      const membership = memberships.find(item => item.tenant_id === requestedTenantId)
-        || memberships.find(item => item.tenant_id === 'default')
-        || memberships[0];
+      const membership = requestedTenantId
+        ? memberships.find(item => item.tenant_id === requestedTenantId)
+        : memberships.find(item => item.tenant_id === BOOTSTRAP_TENANT_ID) || memberships[0];
+      if (!membership) {
+        return res.status(403).json({ error: 'You do not have an active membership in the requested tenant.' });
+      }
       const tenantId = membership.tenant_id;
       const catalogApprover = roleCatalogStore.getApproverByEmail(tenantId, normalizedEmail);
       const approverName = membership.approver_name || (catalogApprover && catalogApprover.name) || '';
@@ -54,6 +59,7 @@ module.exports = function register(deps) {
         email: normalizedEmail,
         isAdmin: membership.role === 'admin',
         role: membership.role,
+        capabilities: capabilitiesForRole(membership.role),
         approverName,
         tenantId,
         tenants,
@@ -68,22 +74,24 @@ module.exports = function register(deps) {
   // GET /api/me
   app.get('/api/me', async (req, res) => {
     try {
-      const tenants = await tenantStore.listForUser(req.auth.email);
-      const currentTenant = tenants.find(tenant => tenant.id === req.tenantId);
+      const context = req.context;
+      const tenants = await tenantStore.listForUser(context.email);
+      const currentTenant = tenants.find(tenant => tenant.id === context.tenantId);
       if (!currentTenant) {
         return res.status(403).json({ error: 'Active tenant membership not found.' });
       }
-      const approver = req.auth.approverName
-        ? roleCatalogStore.getApproverByEmail(req.tenantId, req.auth.email)
+      const approver = context.approverName
+        ? roleCatalogStore.getApproverByEmail(context.tenantId, context.email)
         : null;
       res.json({
-        email: req.auth.email,
-        approverName: req.auth.approverName,
+        email: context.email,
+        approverName: context.approverName,
         approverEmail: approver ? approver.email : '',
-        roles: req.auth.roles,
-        isAdmin: req.auth.isAdmin,
-        role: req.auth.role,
-        tenantId: req.tenantId,
+        roles: context.roles,
+        isAdmin: context.isAdmin,
+        role: context.role,
+        capabilities: context.capabilities,
+        tenantId: context.tenantId,
         tenant: currentTenant,
         tenants,
       });
@@ -98,13 +106,14 @@ module.exports = function register(deps) {
     try {
       const tenantId = String((req.body && req.body.tenant_id) || '').trim();
       if (!tenantId) return res.status(400).json({ error: 'tenant_id is required.' });
-      const membership = await adminUserStore.getMembership(req.auth.email, tenantId);
+      if (req.context.principal.type !== 'user') return res.status(403).json({ error: 'Only users can switch tenant.' });
+      const membership = await adminUserStore.getMembership(req.context.email, tenantId);
       const tenant = await tenantStore.getById(tenantId);
       if (!membership || membership.status !== 'active' || !tenant || tenant.status !== 'active') {
         return res.status(403).json({ error: 'You do not have an active membership in that tenant.' });
       }
-      const token = generateToken({ email: req.auth.email, tenant_id: tenantId });
-      res.json({ token, tenantId, tenant, role: membership.role });
+      const token = generateToken({ email: req.context.email, tenant_id: tenantId });
+      res.json({ token, tenantId, tenant, role: membership.role, capabilities: capabilitiesForRole(membership.role) });
     } catch (err) {
       console.error('POST /api/auth/switch-tenant failed:', err);
       res.status(500).json({ error: 'Failed to switch tenant.' });

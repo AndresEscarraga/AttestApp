@@ -4,10 +4,17 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const XLSX = require('xlsx');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
 const multer = require('multer');
+const { loadWorkbook, worksheetRows, requireSheet } = require('./services/excelWorkbook');
+const {
+  CAPABILITIES,
+  capabilitiesForRole,
+  capabilitiesForApiKey,
+  requireCapability,
+} = require('./security/capabilities');
+const { AppError } = require('./http/errors');
 const { createLogStore } = require('./stores/logStore');
 const { createActivityStore } = require('./stores/activityStore');
 const {
@@ -91,7 +98,14 @@ const PAGE_ACCESS_LABELS = {
 };
 
 function recordActivity(event, tenantId) {
-  const e = { ...event, tenantId: tenantId || 'default' };
+  const resolvedTenantId = typeof tenantId === 'object' && tenantId
+    ? tenantId.tenantId
+    : tenantId;
+  if (!resolvedTenantId) {
+    console.error('[activity] tenant context is required');
+    return;
+  }
+  const e = { ...event, tenantId: resolvedTenantId };
   Promise.resolve()
     .then(() => activityStore.record(e))
     .catch(err => console.error('[activity] record failed:', err));
@@ -136,186 +150,127 @@ function unauthorizedHtml(message = UNAUTHORIZED_MESSAGE) {
 }
 
 function sendAuthError(req, res, status, message = UNAUTHORIZED_MESSAGE) {
+  const context = req.context || {};
   recordActivity({
     type: 'AUTH',
     action: 'unauthorized',
-    email: (req.auth && req.auth.email) || '',
+    email: context.email || '',
     detail: `Denied (${status}) ${req.method} ${req.path}`,
-  }, req.tenantId);
+  }, context.tenantId);
   if (req.path.startsWith('/api/')) {
-    return res.status(status).json({ error: message });
+    return res.status(status).json({ error: message, code: 'AUTHORIZATION_DENIED', requestId: req.requestId });
   }
   return res.status(status).type('html').send(unauthorizedHtml(message));
 }
 
-function getRequestedApprover(req) {
-  return String((req.query && req.query.approver) || '').trim();
+// Source versions are tenant-scoped; parser state is never shared between tenants.
+const rolesVersions = new Map();
+const transactionVersions = new Map();
+
+function requireRuntimeTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
-function getBodyApprover(req) {
-  return String((req.body && req.body.approver) || '').trim();
-}
-
-function hasRoleAccess(ctx, role) {
-  if (!role) return false;
-  if (ctx.isAdmin) return true;
-  return ctx.roles.includes(role);
-}
-
-async function nextSubmissionId() {
-  const db = require('./stores/db').getDb();
-  const row = db.prepare(
-    "SELECT MAX(CAST(submission_id AS INTEGER)) as max_id FROM submissions WHERE submission_id GLOB '[0-9][0-9][0-9][0-9][0-9][0-9]'"
-  ).get();
-  const maxId = row && row.max_id ? Number(row.max_id) : 0;
-  return String(maxId + 1).padStart(6, '0');
-}
-
-// ---------- In-memory data ----------
-let uniqueRoleNames = [];
-let roleToApprover = {};
-let approverToRoles = {};
-let uniqueApprovers = [];
-let approverEmailToName = {};
-let approverNameToEmail = {};
-
-let txHeader = [];
-let txByRole = {};
-
-let rolesVersion = null;
-let txVersion = null;
-
-function parseRolesApprovers(buffer, tenantId = 'default') {
-  // Clear in-place to preserve references held by route modules
-  uniqueRoleNames.length = 0;
-  for (var k in roleToApprover) delete roleToApprover[k];
-  for (var k in approverToRoles) delete approverToRoles[k];
-  uniqueApprovers.length = 0;
-  for (var k in approverEmailToName) delete approverEmailToName[k];
-  for (var k in approverNameToEmail) delete approverNameToEmail[k];
-
-  const wb = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = wb.SheetNames.includes('Complete') ? 'Complete' : wb.SheetNames[0];
-  const ws = wb.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  const seenRole = new Set();
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+async function parseRolesApprovers(buffer, tenantId) {
+  const tid = requireRuntimeTenantId(tenantId);
+  const workbook = await loadWorkbook(buffer);
+  const data = worksheetRows(requireSheet(workbook, 'Complete'));
+  const byRole = new Map();
+  const knownApprovers = new Set();
+  for (let index = 1; index < data.length; index += 1) {
+    const row = data[index];
     const roleName = String(row[0] || '').trim();
-    const fullName = String(row[3] || '').trim();
-    if (!roleName) continue;
-    if (!seenRole.has(roleName)) {
-      seenRole.add(roleName);
-      uniqueRoleNames.push(roleName);
-      roleToApprover[roleName] = fullName;
-      if (fullName) {
-        if (!approverToRoles[fullName]) approverToRoles[fullName] = [];
-        approverToRoles[fullName].push(roleName);
-      }
-    }
+    const approverName = String(row[3] || '').trim();
+    if (!roleName || byRole.has(roleName)) continue;
+    byRole.set(roleName, approverName);
+    if (approverName) knownApprovers.add(approverName);
   }
-  uniqueRoleNames.sort((a, b) => a.localeCompare(b));
-  const sortedApprovers = Object.keys(approverToRoles).sort((a, b) => a.localeCompare(b));
-  uniqueApprovers.push(...sortedApprovers);
-  for (const k of uniqueApprovers) approverToRoles[k].sort((a, b) => a.localeCompare(b));
+  if (!byRole.size) throw new Error('Roles workbook contains no valid role rows.');
 
-  const emailSheet = wb.Sheets.Emails || wb.Sheets.emails;
+  const approverEmails = new Map();
+  const emailSheet = workbook.getWorksheet('Emails') || workbook.getWorksheet('emails');
   if (emailSheet) {
-    const emailRows = XLSX.utils.sheet_to_json(emailSheet, { header: 1, defval: '' });
-    const header = (emailRows[0] || []).map(v => String(v || '').trim().toLowerCase());
-    const nameCol = Math.max(header.findIndex(h => h.includes('full') && h.includes('name')), 0);
-    const emailCol = header.findIndex(h => h.includes('email'));
-    const resolvedEmailCol = emailCol >= 0 ? emailCol : 1;
-    for (let i = 1; i < emailRows.length; i++) {
-      const row = emailRows[i];
-      const fullName = String(row[nameCol] || '').trim();
-      const email = normalizeEmail(row[resolvedEmailCol]);
-      if (!fullName || !email || !approverToRoles[fullName]) continue;
-      approverEmailToName[email] = fullName;
-      approverNameToEmail[fullName] = email;
+    const emailRows = worksheetRows(emailSheet);
+    const header = (emailRows[0] || []).map(value => String(value || '').trim().toLowerCase());
+    const nameColumn = Math.max(header.findIndex(value => value.includes('full') && value.includes('name')), 0);
+    const emailColumn = header.findIndex(value => value.includes('email'));
+    const resolvedEmailColumn = emailColumn >= 0 ? emailColumn : 1;
+    for (let index = 1; index < emailRows.length; index += 1) {
+      const row = emailRows[index];
+      const name = String(row[nameColumn] || '').trim();
+      const email = normalizeEmail(row[resolvedEmailColumn]);
+      if (name && email && knownApprovers.has(name) && !approverEmails.has(name)) approverEmails.set(name, email);
     }
-  } else {
-    console.warn('Roles Approvers workbook does not include an Emails sheet.');
   }
 
-  roleCatalogStore.replaceAssignments(tenantId, uniqueRoleNames.map(roleName => {
-    const approverName = roleToApprover[roleName] || '';
-    const parts = roleName.split(' - ');
-    return {
-      roleName,
-      approverName,
-      approverEmail: approverNameToEmail[approverName] || '',
-      systemName: parts.length >= 2 ? parts[1].trim() : 'Other',
-    };
-  }));
-
-  console.log(
-    `Loaded ${uniqueRoleNames.length} roles, ${uniqueApprovers.length} approvers, ` +
-    `${Object.keys(approverEmailToName).length} approver emails.`
-  );
+  const assignments = [...byRole.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([roleName, approverName]) => {
+      const parts = roleName.split(' - ');
+      return {
+        roleName,
+        approverName,
+        approverEmail: approverEmails.get(approverName) || '',
+        systemName: parts.length >= 2 ? parts[1].trim() : 'Other',
+      };
+    });
+  roleCatalogStore.replaceAssignments(tid, assignments);
+  console.log(`Loaded ${assignments.length} roles, ${knownApprovers.size} approvers, ${approverEmails.size} approver emails for ${tid}.`);
 }
 
-function parseTransactions(buffer, tenantId = 'default') {
-  // Clear in-place to preserve references held by route modules
-  for (var k in txByRole) delete txByRole[k];
-  txHeader.length = 0;
-  const wb = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = wb.SheetNames[0];
-  const ws = wb.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  if (!data.length) return;
-  const rawHeader = data[0].map(v => String(v));
-  while (rawHeader.length && !String(rawHeader[rawHeader.length - 1]).trim()) rawHeader.pop();
-  txHeader.length = 0;
-  var newHeader = rawHeader.map(h => TX_HEADER_RENAMES[h] || h);
-  for (var i = 0; i < newHeader.length; i++) txHeader.push(newHeader[i]);
-  const colCount = rawHeader.length;
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const roleName = String(row[0] || '').trim();
+async function parseTransactions(buffer, tenantId) {
+  const tid = requireRuntimeTenantId(tenantId);
+  const workbook = await loadWorkbook(buffer);
+  const data = worksheetRows(requireSheet(workbook));
+  const rawHeader = (data[0] || []).map(value => String(value || ''));
+  while (rawHeader.length && !rawHeader[rawHeader.length - 1].trim()) rawHeader.pop();
+  if (!rawHeader.length) throw new Error('Transactions workbook has no header.');
+  const header = rawHeader.map(value => TX_HEADER_RENAMES[value] || value);
+  const byRole = {};
+  for (let index = 1; index < data.length; index += 1) {
+    const roleName = String(data[index][0] || '').trim();
     if (!roleName) continue;
-    const trimmed = row.slice(0, colCount).map(v => (v === undefined || v === null) ? '' : v);
-    if (!txByRole[roleName]) txByRole[roleName] = [];
-    txByRole[roleName].push(trimmed);
+    if (!byRole[roleName]) byRole[roleName] = [];
+    byRole[roleName].push(data[index].slice(0, rawHeader.length));
   }
-  roleCatalogStore.replaceTransactions(tenantId, txByRole);
-  console.log(`Loaded transactions: ${data.length - 1} rows across ${Object.keys(txByRole).length} roles.`);
+  if (!Object.keys(byRole).length) throw new Error('Transactions workbook contains no valid transaction rows.');
+  roleCatalogStore.replaceTransactions(tid, byRole, header);
+  console.log(`Loaded ${data.length - 1} transaction rows across ${Object.keys(byRole).length} roles for ${tid}.`);
 }
 
-async function refreshRoles({ force = false, tenantId = 'default' } = {}) {
-  const version = await dataStore.getVersion(ROLES_FILE_NAME, tenantId);
-  if (version === null) {
-    console.error('Roles source file not found:', ROLES_FILE_NAME);
-    return false;
-  }
-  if (!force && tenantId === 'default' && version === rolesVersion) return false;
-  const { buffer, source } = await dataStore.getFile(ROLES_FILE_NAME, tenantId);
-  parseRolesApprovers(buffer, tenantId);
-  if (tenantId === 'default') rolesVersion = version;
+async function refreshRoles({ force = false, tenantId } = {}) {
+  const tid = requireRuntimeTenantId(tenantId);
+  const version = await dataStore.getVersion(ROLES_FILE_NAME, tid);
+  if (version === null) return false;
+  if (!force && rolesVersions.get(tid) === version) return false;
+  const { buffer, source } = await dataStore.getFile(ROLES_FILE_NAME, tid);
+  await parseRolesApprovers(buffer, tid);
+  rolesVersions.set(tid, version);
   console.log(`Roles/approvers loaded from ${source} (version ${version}).`);
   return true;
 }
 
-async function refreshTransactions({ force = false, tenantId = 'default' } = {}) {
-  const version = await dataStore.getVersion(TX_FILE_NAME, tenantId);
-  if (version === null) {
-    console.error('Transactions source file not found:', TX_FILE_NAME);
-    return false;
-  }
-  if (!force && tenantId === 'default' && version === txVersion) return false;
-  const { buffer, source } = await dataStore.getFile(TX_FILE_NAME, tenantId);
-  parseTransactions(buffer, tenantId);
-  if (tenantId === 'default') txVersion = version;
+async function refreshTransactions({ force = false, tenantId } = {}) {
+  const tid = requireRuntimeTenantId(tenantId);
+  const version = await dataStore.getVersion(TX_FILE_NAME, tid);
+  if (version === null) return false;
+  if (!force && transactionVersions.get(tid) === version) return false;
+  const { buffer, source } = await dataStore.getFile(TX_FILE_NAME, tid);
+  await parseTransactions(buffer, tid);
+  transactionVersions.set(tid, version);
   console.log(`Transactions loaded from ${source} (version ${version}).`);
   return true;
 }
 
 // ---------- JWT Authentication ----------
 function generateToken(payload) {
-  // Ensure tenant_id is in the token
+  const email = normalizeEmail(payload && payload.email);
+  const tenantId = String((payload && payload.tenant_id) || '').trim();
+  if (!email || !tenantId) throw new Error('email and tenant_id are required to issue a token');
   return jwt.sign(
-    { email: payload.email, tenant_id: payload.tenant_id || 'default' },
+    { email, tenant_id: tenantId },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
@@ -326,77 +281,121 @@ function verifyToken(token) {
 }
 
 // ---------- Authenticated principal + tenant context ----------
-async function getAuthenticatedIdentity(req) {
-  // Check Authorization header (Bearer token)
+async function getAuthenticatedPrincipal(req) {
+  const apiKey = String(req.get('x-api-key') || '').trim();
+  if (apiKey) {
+    const keyData = await apiKeyStore.validateKey(apiKey);
+    if (!keyData) return { type: 'invalid_api_key', email: '', tenantId: '' };
+    return {
+      type: 'api_key',
+      email: `api-key:${keyData.id}`,
+      tenantId: keyData.tenant_id,
+      apiKeyId: keyData.id,
+      apiKeyPermission: keyData.permissions,
+    };
+  }
+
   const authHeader = String(req.get('authorization') || '').trim();
   if (authHeader.startsWith('Bearer ')) {
     try {
-      const token = authHeader.slice(7);
-      const payload = verifyToken(token);
+      const payload = verifyToken(authHeader.slice(7));
       return {
+        type: 'user',
         email: normalizeEmail(payload.email || ''),
         tenantId: String(payload.tenant_id || '').trim(),
         source: 'jwt',
       };
     } catch (err) {
-      // An explicitly supplied token never falls back to a different dev identity.
-      return { email: '', tenantId: '', source: 'invalid_jwt' };
+      return { type: 'invalid_jwt', email: '', tenantId: '' };
     }
   }
 
-  // Dev mode fallback
   if (!isProduction) {
     return {
+      type: 'user',
       email: normalizeEmail(
         process.env.DEV_AUTH_EMAIL ||
         process.env.LOCAL_AUTH_EMAIL ||
         req.get('x-dev-auth-email') ||
         'admin.one@attest.local'
       ),
-      tenantId: String(process.env.DEV_TENANT_ID || '').trim(),
+      tenantId: String(process.env.DEV_TENANT_ID || 'default').trim(),
       source: 'development',
     };
   }
-  return { email: '', tenantId: '', source: 'anonymous' };
+  return { type: 'anonymous', email: '', tenantId: '' };
 }
 
-async function buildAuthContext(req) {
-  const identity = await getAuthenticatedIdentity(req);
-  const email = identity.email;
-  if (!email) {
-    return {
-      email: '', tenantId: '', role: '', approverName: '', roles: [],
-      memberships: [], isAdmin: false, isAuthorized: false,
-    };
+function freezeContext(raw) {
+  const roles = Object.freeze([...(raw.roles || [])]);
+  const memberships = Object.freeze((raw.memberships || []).map(item => Object.freeze({ ...item })));
+  const capabilities = Object.freeze([...(raw.capabilities || [])]);
+  const principal = Object.freeze({ ...(raw.principal || {}) });
+  const membership = raw.membership ? Object.freeze({ ...raw.membership }) : null;
+  const tenant = raw.tenant ? Object.freeze({ ...raw.tenant }) : null;
+  return Object.freeze({ ...raw, principal, membership, tenant, roles, memberships, capabilities });
+}
+
+function anonymousContext(principal) {
+  return freezeContext({
+    principal,
+    email: '', tenantId: '', role: '', approverName: '', roles: [],
+    memberships: [], capabilities: [], membership: null, tenant: null,
+    isAdmin: false, isAuthorized: false,
+  });
+}
+
+async function buildRequestContext(req) {
+  const principal = await getAuthenticatedPrincipal(req);
+  if (principal.type === 'api_key') {
+    const tenant = await tenantStore.getById(principal.tenantId);
+    if (!tenant || tenant.status !== 'active') return anonymousContext(principal);
+    return freezeContext({
+      principal,
+      email: principal.email,
+      tenantId: tenant.id,
+      role: 'api_key',
+      approverName: '',
+      roles: [],
+      memberships: [],
+      capabilities: capabilitiesForApiKey(principal.apiKeyPermission),
+      membership: null,
+      tenant,
+      isAdmin: false,
+      isAuthorized: true,
+    });
   }
+
+  const email = principal.email;
+  if (!email) return anonymousContext(principal);
 
   const memberships = await adminUserStore.listMemberships(email);
-  let membership = memberships.find(item => item.tenant_id === identity.tenantId);
-  if (!membership && identity.source === 'development') {
-    membership = memberships.find(item => item.tenant_id === (process.env.DEV_TENANT_ID || '')) || memberships[0];
-  }
-  if (!membership) {
-    return {
-      email, tenantId: identity.tenantId, role: '', approverName: '', roles: [],
-      memberships, isAdmin: false, isAuthorized: false,
-    };
-  }
+  const membership = memberships.find(item => item.tenant_id === principal.tenantId);
+  if (!membership) return anonymousContext(principal);
 
   const tenantId = membership.tenant_id;
+  const tenant = await tenantStore.getById(tenantId);
+  if (!tenant || tenant.status !== 'active' || membership.status !== 'active') {
+    return anonymousContext(principal);
+  }
   const catalogApprover = roleCatalogStore.getApproverByEmail(tenantId, email);
   const approverName = membership.approver_name || (catalogApprover && catalogApprover.name) || '';
   const roles = approverName ? roleCatalogStore.getRolesForApprover(tenantId, approverName) : [];
   const isAdmin = membership.role === 'admin';
-  return {
+  return freezeContext({
+    principal,
     email,
     tenantId,
     role: membership.role,
     approverName,
     roles,
     memberships,
+    capabilities: capabilitiesForRole(membership.role),
+    membership,
+    tenant,
     isAdmin,
-    isAuthorized: membership.status === 'active',
-  };
+    isAuthorized: true,
+  });
 }
 
 function isPublicPath(path) {
@@ -411,92 +410,102 @@ function isPublicPath(path) {
 
 async function authMiddleware(req, res, next) {
   try {
-    // API keys already carry an authenticated, tenant-scoped principal.
-    if (!req.apiKey) req.auth = await buildAuthContext(req);
-    if (req.auth && req.auth.tenantId) {
-      req.tenantId = req.auth.tenantId;
-      req.tenantContext = Object.freeze({
-        tenantId: req.auth.tenantId,
-        email: req.auth.email,
-        role: req.auth.role,
-        principalType: req.apiKey ? 'api_key' : 'user',
-      });
-    }
+    req.context = await buildRequestContext(req);
 
     // Public paths — let through even without auth
     if (isPublicPath(req.path)) return next();
 
     // Protected paths — require valid auth
-    if (!req.auth.email) {
+    if (!req.context.email) {
       if (req.path.startsWith('/api/')) {
-        return res.status(401).json({ error: 'Authentication required.' });
+        return res.status(401).json({ error: 'Authentication required.', code: 'AUTHENTICATION_REQUIRED', requestId: req.requestId });
       }
       return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
     }
-    if (!req.auth.isAuthorized) {
+    if (!req.context.isAuthorized) {
       return sendAuthError(req, res, 403);
     }
     return next();
   } catch (err) {
     console.error('Authentication failed:', err);
     if (req.path.startsWith('/api/')) {
-      return res.status(401).json({ error: 'Authentication failed.' });
+      return res.status(401).json({ error: 'Authentication failed.', code: 'AUTHENTICATION_FAILED', requestId: req.requestId });
     }
     return res.redirect('/login.html');
   }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.auth && req.auth.isAdmin) return next();
-  return sendAuthError(req, res, 403);
-}
-
 function recordPageAccess(req, res, next) {
-  if (req.method === 'GET' && Object.prototype.hasOwnProperty.call(PAGE_ACCESS_LABELS, req.path)) {
+  if (req.method === 'GET' && req.context && req.context.isAuthorized && Object.prototype.hasOwnProperty.call(PAGE_ACCESS_LABELS, req.path)) {
     recordActivity({
       type: 'AUTH',
       action: 'access',
-      email: (req.auth && req.auth.email) || '',
+      email: (req.context && req.context.email) || '',
       detail: PAGE_ACCESS_LABELS[req.path],
-    }, req.tenantId);
+    }, req.context);
   }
   return next();
 }
 
 // ---------- Global middleware ----------
+function requestMetadataMiddleware(req, res, next) {
+  const supplied = String(req.get('x-request-id') || '').trim();
+  req.requestId = /^[a-zA-Z0-9._:-]{8,128}$/.test(supplied) ? supplied : crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.requestId);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
+  );
+  if (isProduction && req.secure) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
+  next();
+}
+
+const authAttempts = new Map();
+const AUTH_RATE_WINDOW_MS = positiveIntEnv('AUTH_RATE_WINDOW_MS', 15 * 60 * 1000);
+const AUTH_RATE_MAX_ATTEMPTS = positiveIntEnv('AUTH_RATE_MAX_ATTEMPTS', 20);
+
+function authRateLimitMiddleware(req, res, next) {
+  if (req.method !== 'POST' || req.path !== '/api/auth') return next();
+  const email = normalizeEmail(req.body && req.body.email);
+  const key = `${req.ip || req.socket.remoteAddress || 'unknown'}:${email}`;
+  const now = Date.now();
+  const existing = authAttempts.get(key);
+  const entry = !existing || existing.resetAt <= now
+    ? { count: 0, resetAt: now + AUTH_RATE_WINDOW_MS }
+    : existing;
+  if (entry.count >= AUTH_RATE_MAX_ATTEMPTS) {
+    const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    res.setHeader('Retry-After', String(retryAfter));
+    return res.status(429).json({
+      error: 'Too many authentication attempts. Try again later.',
+      code: 'AUTH_RATE_LIMITED',
+      requestId: req.requestId,
+    });
+  }
+  res.once('finish', () => {
+    if (res.statusCode >= 200 && res.statusCode < 400) authAttempts.delete(key);
+    else {
+      entry.count += 1;
+      authAttempts.set(key, entry);
+    }
+  });
+  next();
+}
+
+app.use(requestMetadataMiddleware);
 app.use(express.json({ limit: '4mb' }));
+app.use(authRateLimitMiddleware);
 
 // API Key authentication middleware — runs before JWT for API routes
-async function apiKeyMiddleware(req, res, next) {
-  const apiKey = String(req.get('x-api-key') || '').trim();
-  if (!apiKey) return next(); // No API key, fall through to JWT
-  try {
-    const keyData = await apiKeyStore.validateKey(apiKey);
-    if (!keyData) return res.status(401).json({ error: 'Invalid or revoked API key.' });
-    req.apiKey = keyData;
-    req.tenantId = keyData.tenant_id;
-    // Allow access based on permissions
-    if (keyData.permissions === 'health-check' && req.path !== '/healthz') {
-      return res.status(403).json({ error: 'API key has health-check only permissions.' });
-    }
-    if (keyData.permissions === 'read-only' && !['GET','HEAD'].includes(req.method)) {
-      return res.status(403).json({ error: 'API key has read-only permissions.' });
-    }
-    // Set a pseudo-auth for recordActivity
-    req.auth = {
-      email: 'api-key:' + keyData.id,
-      tenantId: keyData.tenant_id,
-      role: 'api_key',
-      isAdmin: false,
-      approverName: '',
-      roles: [],
-      memberships: [],
-      isAuthorized: true,
-    };
-    next();
-  } catch (err) { next(); }
-}
-app.use(apiKeyMiddleware);
 
 // ---------- Static routes + API modules ----------
 app.get('/healthz', (req, res) => res.json({ ok: true }));
@@ -512,18 +521,36 @@ const { getDb } = require('./stores/db');
 require('./routes')({
   app, db: getDb(),
   logStore, activityStore, adminUserStore, dataStore, campaignStore, sodStore, evidenceStore, tenantStore, apiKeyStore, notificationStore, roleCatalogStore,
-  uniqueRoleNames, roleToApprover, approverToRoles, uniqueApprovers, approverEmailToName, approverNameToEmail,
-  txHeader, txByRole, rolesVersion, txVersion,
   recordActivity, createNotification, refreshRoles, refreshTransactions,
   generateToken, verifyToken, normalizeEmail, escapeHtml, unauthorizedHtml, sendAuthError,
-  requireAdmin, upload, JWT_SECRET, REPORTS_DIR, ROLES_FILE_NAME, TX_FILE_NAME,
+  requireCapability, CAPABILITIES,
+  upload, JWT_SECRET, REPORTS_DIR, ROLES_FILE_NAME, TX_FILE_NAME,
   UNAUTHORIZED_MESSAGE, MAX_TRANSACTION_ROLE_LOOKUPS, MAX_SUBMISSION_ROWS,
   PROTECTED_ADMIN_EMAILS,
 });
 
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API route not found.', code: 'ROUTE_NOT_FOUND', requestId: req.requestId });
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = Number(err.status || err.statusCode) || (err.code === 'LIMIT_FILE_SIZE' ? 413 : 500);
+  const safeStatus = status >= 400 && status <= 599 ? status : 500;
+  const expose = safeStatus < 500 || err instanceof AppError;
+  const message = expose ? err.message : 'Internal server error.';
+  const code = err.code || (safeStatus === 500 ? 'INTERNAL_ERROR' : 'REQUEST_FAILED');
+  console.error(`[${req.requestId}] ${req.method} ${req.originalUrl} failed:`, err);
+  res.status(safeStatus).json({ error: message, code, requestId: req.requestId, details: expose ? err.details : undefined });
+});
+
 // Helper: create a notification (non-blocking)
 async function createNotification(opts) {
-  try { return await notificationStore.create({ tenant_id: opts.tenant_id || 'default', type: opts.type || 'system', title: opts.title || '', body: opts.body || '', link: opts.link || '', icon: opts.icon || '', email: opts.email || '' }); }
+  try {
+    const tenantId = String(opts && opts.tenant_id || '').trim();
+    if (!tenantId) throw new Error('tenant_id is required for notifications');
+    return await notificationStore.create({ tenant_id: tenantId, type: opts.type || 'system', title: opts.title || '', body: opts.body || '', link: opts.link || '', icon: opts.icon || '', email: opts.email || '' });
+  }
   catch (err) { console.warn('[notifications] Failed to create:', err.message); return null; }
 }
 
@@ -531,13 +558,14 @@ async function createNotification(opts) {
 async function start() {
   try {
     const { generateExcelFiles, seedDatabase } = require('./scripts/seed-on-first-run');
-    generateExcelFiles(); seedDatabase();
+    await generateExcelFiles();
+    seedDatabase();
   } catch (err) { console.warn('[seed] Seed on first run failed (non-fatal):', err.message); }
   console.log('Loading roles/approvers...');
-  try { await refreshRoles({ force: true }); } catch (err) { console.error('Initial roles/approvers load failed:', err); }
+  try { await refreshRoles({ force: true, tenantId: 'default' }); } catch (err) { console.error('Initial roles/approvers load failed:', err); }
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Attest running at http://localhost:${PORT}`);
-    setImmediate(async () => { try { console.log('Loading transactions in background...'); await refreshTransactions({ force: true }); } catch (err) { console.error('Background transactions load failed:', err); } });
+    setImmediate(async () => { try { console.log('Loading transactions in background...'); await refreshTransactions({ force: true, tenantId: 'default' }); } catch (err) { console.error('Background transactions load failed:', err); } });
   });
 }
 start();

@@ -8,6 +8,11 @@ function newId() { return 'key_' + crypto.randomUUID().slice(0, 8); }
 function generateKey() { return 'att_live_' + crypto.randomBytes(24).toString('hex'); }
 function hashKey(key) { return crypto.createHash('sha256').update(key).digest('hex'); }
 function keyPrefix(key) { return key.substring(0, 12) + '...'; }
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
+}
 
 class ApiKeyStore {
   constructor() { this.db = getDb(); }
@@ -22,7 +27,7 @@ class ApiKeyStore {
     this.db.prepare(`
       INSERT INTO api_keys (id, tenant_id, name, key_prefix, key_hash, permissions, created_by, created_at)
       VALUES (?,?,?,?,?,?,?,?)
-    `).run(id, tenant_id || 'default', name.trim(), prefix, hash,
+    `).run(id, requireTenantId(tenant_id), name.trim(), prefix, hash,
       VALID_PERMISSIONS.includes(permissions) ? permissions : 'read-only',
       created_by, now);
 
@@ -32,7 +37,7 @@ class ApiKeyStore {
   async listAll(tenant_id) {
     const rows = this.db.prepare(
       "SELECT id, tenant_id, name, key_prefix, permissions, created_by, created_at, last_used_at, revoked FROM api_keys WHERE tenant_id = ? AND revoked = 0 ORDER BY created_at DESC"
-    ).all(tenant_id || 'default');
+    ).all(requireTenantId(tenant_id));
     return rows.map(r => ({
       id: r.id, tenant_id: r.tenant_id, name: r.name, key_prefix: r.key_prefix,
       permissions: r.permissions, created_by: r.created_by, created_at: r.created_at,
@@ -42,7 +47,7 @@ class ApiKeyStore {
 
   async revoke(id, tenantId) {
     const r = this.db.prepare("UPDATE api_keys SET revoked = 1 WHERE id = ? AND tenant_id = ?")
-      .run(id, String(tenantId || ''));
+      .run(id, requireTenantId(tenantId));
     return r.changes > 0;
   }
 

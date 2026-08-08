@@ -1,144 +1,110 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Attest — SoD Conflicts</title>
-
-<link rel="stylesheet" href="styles.css">
-
-
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attest — Segregation of Duties</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .sod-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .sod-kpi{padding:16px}.sod-kpi-label{font-size:11px;color:var(--text-tertiary);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.sod-kpi-value{font-size:26px;font-weight:750;margin-top:5px}
+    .sod-subject strong{display:block}.sod-subject span,.sod-access small,.sod-resolution-meta{display:block;color:var(--text-tertiary);font-size:11px;margin-top:3px}
+    .sod-access-line{display:flex;align-items:flex-start;gap:6px;margin:3px 0}.sod-access-key{font-size:10px;font-weight:750;color:var(--accent);min-width:15px}
+    .sod-snapshot{font-family:var(--font-mono,monospace);font-size:10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sod-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sod-span-2{grid-column:1/-1}
+    .sod-history{border-top:1px solid var(--border-light);padding-top:12px;max-height:145px;overflow:auto}.sod-history-item{padding:8px 0;border-bottom:1px solid var(--border-light);font-size:11px}.sod-history-item:last-child{border-bottom:0}
+    @media(max-width:1050px){.sod-kpis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:700px){.sod-kpis,.sod-modal-grid{grid-template-columns:1fr}.sod-span-2{grid-column:auto}}
+  </style>
+  
+  
 
 <script src="/components.js"></script>
 <script src="/shared.js"></script>
 </head>
 <body class="has-sidebar">
-<attest-sidebar active="sod"></attest-sidebar>
+  <attest-sidebar active="sod"></attest-sidebar>
+  <div class="main">
+    <attest-topbar breadcrumb="Attest › <span>Segregation of Duties</span>" search-placeholder="Search subjects, access or rules..."></attest-topbar>
+    <div class="content">
+      <div class="content-header flex-between">
+        <div>
+          <h1>Segregation of Duties</h1>
+          <p>Conflicts are evaluated against effective subject, account and entitlement assignments. Review ownership is shown separately.</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="detectBtn">Run Detection</button>
+          <button class="btn btn-primary" id="newRuleBtn">+ New Rule</button>
+        </div>
+      </div>
 
-<div class="main">
+      <div class="sod-kpis" aria-label="SoD conflict summary">
+        <div class="card sod-kpi"><div class="sod-kpi-label">Open</div><div class="sod-kpi-value" id="sodOpen">—</div></div>
+        <div class="card sod-kpi"><div class="sod-kpi-label">Critical open</div><div class="sod-kpi-value" id="sodCritical">—</div></div>
+        <div class="card sod-kpi"><div class="sod-kpi-label">Mitigated</div><div class="sod-kpi-value" id="sodMitigated">—</div></div>
+        <div class="card sod-kpi"><div class="sod-kpi-label">Risk accepted</div><div class="sod-kpi-value" id="sodAccepted">—</div></div>
+      </div>
 
-<attest-topbar breadcrumb="Attest › <span>SoD Conflicts</span>" search-placeholder="Search..."></attest-topbar>
+      <div class="card mb-16">
+        <div class="card-header flex-between"><h2>Effective-access conflicts</h2><span class="text-sm text-muted" id="conflictsCount">Loading…</span></div>
+        <div class="card-body no-pad">
+          <div class="table-wrap">
+            <table class="data-table" id="conflictsTable">
+              <thead><tr><th>Severity</th><th>Subject</th><th>Effective access</th><th>Applications / accounts</th><th>Rule / owner</th><th>Snapshot</th><th>Status</th><th></th></tr></thead>
+              <tbody id="conflictsBody"><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
-  <div class="content">
-    <div class="content-header flex-between">
-      <div><h1>Segregation of Duties Conflicts</h1><p>Automated SoD rule engine detects conflicting role assignments across all connected systems.</p></div>
-      <div class="btn-group">
-        <button class="btn btn-secondary" id="detectBtn">🔍 Run Detection</button>
-        <button class="btn btn-primary" id="newRuleBtn">+ New Rule</button>
+      <div class="card">
+        <div class="card-header flex-between"><h2>Incompatibility policy</h2><span class="text-sm text-muted" id="rulesCount">Loading…</span></div>
+        <div class="card-body no-pad">
+          <div class="table-wrap">
+            <table class="data-table"><thead><tr><th>Rule</th><th>Entitlement A</th><th>Entitlement B</th><th>Severity</th><th>Framework</th><th></th></tr></thead><tbody id="rulesBody"></tbody></table>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="card mb-16"><div class="card-body no-pad">
-      <table class="data-table"><thead><tr><th class="sortable">Severity</th><th class="sortable">User</th><th>Conflict</th><th>Role A</th><th>Role B</th><th>Rule</th><th class="sortable">Detected</th><th></th></tr></thead>
-        <tbody id="conflictsBody"><tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">Loading conflicts…</td></tbody></table>
-    </div></div>
-    <div class="card"><div class="card-header"><h2>SoD Rules</h2><span class="text-sm text-muted" id="rulesCount">0 rules</span></div>
-      <div class="card-body no-pad"><table class="data-table"><thead><tr><th class="sortable">Rule Name</th><th>Role A</th><th>Role B</th><th class="sortable">Severity</th><th class="sortable">Framework</th><th></th></tr></thead>
-        <tbody id="rulesBody"><tr><td colspan="6" class="text-sm text-muted" style="text-align:center;padding:20px">No rules defined.</td></tr></tbody></table>
-    </div></div>
   </div>
-</div>
 
-<div class="modal-backdrop hidden" id="ruleModal">
-  <div class="modal"><div class="modal-header"><h3>New SoD Rule</h3><button class="modal-close" id="modalClose">✕</button></div>
-    <div class="modal-body" style="display:grid;gap:14px">
-      <div class="modal-error" id="modalError"></div>
-      <div><label class="form-label">Rule Name *</label><input class="form-input" id="ruleName" placeholder="e.g. AP Clerk + GL Accountant"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="form-label">Role A *</label><input class="form-input" id="ruleRoleA" placeholder="Select role..." list="rolesList"></div>
-        <div><label class="form-label">Role B *</label><input class="form-input" id="ruleRoleB" placeholder="Select role..." list="rolesList"></div>
-      </div>
-      <datalist id="rolesList"></datalist>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="form-label">Severity</label><select class="form-select" id="ruleSeverity"><option value="high">High</option><option value="critical">Critical</option><option value="medium">Medium</option></select></div>
+  <div class="modal-backdrop hidden" id="ruleModal">
+    <div class="modal">
+      <div class="modal-header"><h3>New SoD rule</h3><button class="modal-close" id="ruleModalClose">✕</button></div>
+      <div class="modal-body sod-modal-grid">
+        <div class="modal-error sod-span-2" id="ruleModalError"></div>
+        <div class="sod-span-2"><label class="form-label">Rule name *</label><input class="form-input" id="ruleName" placeholder="e.g. Disbursement + GL reconciliation"></div>
+        <div><label class="form-label">Entitlement A *</label><input class="form-input" id="ruleRoleA" list="rolesList" placeholder="Select an entitlement"></div>
+        <div><label class="form-label">Entitlement B *</label><input class="form-input" id="ruleRoleB" list="rolesList" placeholder="Select a different entitlement"></div>
+        <datalist id="rolesList"></datalist>
+        <div><label class="form-label">Severity</label><select class="form-select" id="ruleSeverity"><option value="critical">Critical</option><option value="high" selected>High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
         <div><label class="form-label">Framework</label><select class="form-select" id="ruleFramework"><option value="SOX">SOX</option><option value="ISO27001">ISO 27001</option><option value="SOC2">SOC 2</option><option value="GDPR">GDPR</option></select></div>
+        <div class="sod-span-2"><label class="form-label">Control rationale</label><textarea class="form-textarea" id="ruleDescription" rows="2" placeholder="Why these effective entitlements are incompatible"></textarea></div>
       </div>
+      <div class="modal-footer"><button class="btn btn-secondary" id="ruleModalCancel">Cancel</button><button class="btn btn-primary" id="ruleModalSave">Create Rule</button></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" id="modalCancel">Cancel</button><button class="btn btn-primary" id="modalSave">Create Rule</button></div>
   </div>
-<script>
-(function(){
-  var el=function(id){return document.getElementById(id);},state={conflicts:[],rules:[]};
-  // Auth handled by shared.js
-// Fetch auth inject handled by shared.js
 
-  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
+  <div class="modal-backdrop hidden" id="resolutionModal">
+    <div class="modal" style="width:min(680px,calc(100vw - 24px))">
+      <div class="modal-header"><div><h3 id="resolutionTitle">Resolve conflict</h3><div class="text-sm text-muted" id="resolutionSubject"></div></div><button class="modal-close" id="resolutionModalClose">✕</button></div>
+      <div class="modal-body sod-modal-grid">
+        <div class="modal-error sod-span-2" id="resolutionError"></div>
+        <div><label class="form-label">Decision *</label><select class="form-select" id="resolutionStatus"></select></div>
+        <div><label class="form-label">Resolution owner *</label><input class="form-input" id="resolutionOwner" placeholder="Named control or risk owner"></div>
+        <div class="sod-span-2"><label class="form-label">Reason *</label><textarea class="form-textarea" id="resolutionReason" rows="3" placeholder="Document the control, exception rationale, or reason for reopening"></textarea></div>
+        <div id="resolutionExpiryField"><label class="form-label">Expiry / review date *</label><input class="form-input" type="datetime-local" id="resolutionExpiry"></div>
+        <div id="resolutionEvidenceField"><label class="form-label">Evidence reference *</label><input class="form-input" id="resolutionEvidence" placeholder="Ticket, control, document or evidence URI"></div>
+        <div class="sod-span-2 text-sm text-muted" id="resolutionGuidance"></div>
+        <div class="sod-span-2 sod-history"><strong class="text-sm">Resolution history</strong><div id="resolutionHistory" class="text-muted text-sm" style="margin-top:8px">Loading…</div></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" id="resolutionModalCancel">Cancel</button><button class="btn btn-primary" id="resolutionModalSave">Save Decision</button></div>
+    </div>
+  </div>
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
-
-  function loadData(){
-    Promise.all([
-      fetch('/api/sod/conflicts').then(function(r){return r.json();}),
-      fetch('/api/sod/rules').then(function(r){return r.json();})
-    ]).then(function(results){
-      state.conflicts=results[0];state.rules=results[1];
-      var open=state.conflicts.filter(function(c){return c.status==='open';}).length;
-      var badge=el('sodBadge');if(badge&&open>0){badge.textContent=open;badge.style.display='';}
-      render();
-    });
-  }
-  function render(){
-    var cb=el('conflictsBody'),rb=el('rulesBody');
-    if(!state.conflicts.length){cb.innerHTML='<tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">No conflicts detected. Run detection after creating rules.</td></tr>';}
-    else{
-      var html='';
-      state.conflicts.forEach(function(c){
-        var sevBadge=c.severity==='critical'?'badge-danger':c.severity==='high'?'badge-warning':'badge-info';
-        var rowClass=c.severity==='critical'?'row-critical':c.severity==='high'?'row-warning':'';
-        var rule=state.rules.find(function(r){return r.id===c.rule_id;});
-        html+='<tr class="'+rowClass+'"><td><span class="badge '+sevBadge+'">'+c.severity.charAt(0).toUpperCase()+c.severity.slice(1)+'</span></td>'+
-          '<td><strong>'+esc(c.approver_name)+'</strong></td>'+
-          '<td>Conflict: '+esc(c.role_a.split(' - ').pop())+' + '+esc(c.role_b.split(' - ').pop())+'</td>'+
-          '<td class="text-sm">'+esc(c.role_a)+'</td><td class="text-sm">'+esc(c.role_b)+'</td>'+
-          '<td><span class="text-mono">'+(rule?rule.name.split(' - ')[0]:'—')+'</span></td>'+
-          '<td>'+fmtDate(c.detected_at)+'</td>'+
-          '<td>'+(c.status==='open'?'<button class="btn btn-danger btn-sm mit-btn" data-id="'+c.id+'">Mitigate</button>':'<span class="badge badge-success">'+c.status+'</span>')+'</td></tr>';
-      });
-      cb.innerHTML=html;
-      cb.querySelectorAll('.mit-btn').forEach(function(b){b.addEventListener('click',function(){mitigateConflict(b.dataset.id);});});
-    }
-    el('rulesCount').textContent=state.rules.length+' rule'+(state.rules.length!==1?'s':'');
-    if(!state.rules.length){rb.innerHTML='<tr><td colspan="6" class="text-sm text-muted" style="text-align:center;padding:20px">No rules defined.</td></tr>';}
-    else{
-      var rh='';
-      state.rules.forEach(function(r){rh+='<tr><td><strong>'+esc(r.name)+'</strong></td><td class="text-sm">'+esc(r.role_a)+'</td><td class="text-sm">'+esc(r.role_b)+'</td><td><span class="badge '+(r.severity==='critical'?'badge-danger':'badge-warning')+'">'+r.severity+'</span></td><td>'+esc(r.framework)+'</td><td><button class="btn btn-ghost btn-xs del-rule" data-id="'+r.id+'" style="color:var(--danger)">Delete</button></td></tr>';});
-      rb.innerHTML=rh;
-      rb.querySelectorAll('.del-rule').forEach(function(b){b.addEventListener('click',function(){fetch('/api/sod/rules/'+b.dataset.id,{method:'DELETE'}).then(loadData);});});
-    }
-  }
-  async function mitigateConflict(id){await fetch('/api/sod/conflicts/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'mitigated',mitigation_notes:'Mitigated by admin'})});loadData();}
-  el('detectBtn').addEventListener('click',function(){el('detectBtn').disabled=true;el('detectBtn').textContent='Detecting…';fetch('/api/sod/detect',{method:'POST'}).then(function(r){return r.json();}).then(function(d){Attest.showToast(d.detected+' new conflict(s) found.','success');loadData();el('detectBtn').disabled=false;el('detectBtn').textContent='🔍 Run Detection';});});
-  function openRuleModal(){el('ruleModal').classList.remove('hidden');el('modalError').textContent='';el('ruleName').value='';el('ruleRoleA').value='';el('ruleRoleB').value='';
-    fetch('/api/roles').then(function(r){return r.json();}).then(function(roles){var dl=el('rolesList');dl.innerHTML='';roles.forEach(function(r){var o=document.createElement('option');o.value=r;dl.appendChild(o);});});
-  }
-  function closeRuleModal(){el('ruleModal').classList.add('hidden');}
-  el('newRuleBtn').addEventListener('click',openRuleModal);
-  el('modalClose').addEventListener('click',closeRuleModal);el('modalCancel').addEventListener('click',closeRuleModal);
-  el('modalSave').addEventListener('click',function(){
-    var name=el('ruleName').value.trim(),ra=el('ruleRoleA').value.trim(),rb=el('ruleRoleB').value.trim();
-    if(!name||!ra||!rb){el('modalError').textContent='Name, Role A, and Role B are required.';return;}
-    fetch('/api/sod/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,role_a:ra,role_b:rb,severity:el('ruleSeverity').value,framework:el('ruleFramework').value})})
-    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeRuleModal();loadData();})
-    .catch(function(e){el('modalError').textContent=e.message;});
-  });
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeRuleModal();});
-  loadData();
-})();
-</script>
-<script src="/mobile.js"></script>
-</div>
-</div>
-</div>
-
-
+  
+  <script src="/sod.js"></script>
+  <script src="/mobile.js"></script>
 <attest-mobile-tabbar active="sod"></attest-mobile-tabbar>
 </body>
 </html>

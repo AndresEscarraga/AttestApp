@@ -37,7 +37,7 @@ class SqliteLogStore {
           rejectionReason: e.rejectionReason || '',
           rowIndex: e.rowIndex,
           campaignId: e.campaignId || '',
-          tenantId: e.tenantId || 'default',
+          tenantId: requireTenantId(e.tenantId),
         });
       }
     });
@@ -47,7 +47,7 @@ class SqliteLogStore {
   async readAll(filters = {}) {
     let sql = 'SELECT * FROM submissions WHERE 1=1';
     const params = {};
-    const tenantId = filters.tenantId || 'default';
+    const tenantId = requireTenantId(filters.tenantId);
     sql += ' AND tenant_id = @tenantId';
     params.tenantId = tenantId;
     if (filters.approver) { sql += ' AND approver = @approver'; params.approver = filters.approver; }

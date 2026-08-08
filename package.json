@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run test:multitenant && npm run test:multitenant-ui",
+    "test:integration": "node scripts/test-multitenant.js",
     "test:multitenant": "node scripts/test-multitenant.js",
     "test:multitenant-ui": "node scripts/test-multitenant-ui.js",
-    "test:e2e": "node scripts/test-e2e.js",
+    "test:e2e": "node scripts/test-multitenant-ui.js",
     "build": "node scripts/build.js",
     "start": "node server.js",
     "start:local:admin": "set DEV_AUTH_EMAIL=admin.one@attest.local&& node server.js",
@@ -22,12 +23,12 @@
     "adm-zip": "^0.6.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^13.0.3",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
-    "multer": "^2.2.0",
-    "xlsx": "^0.18.5"
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "playwright": "^1.59.1"

@@ -91,15 +91,7 @@
   // ── Load user + update sidebar ──
   async function loadUser() {
     try {
-      var res = await fetch('/api/me');
-      me = await res.json().catch(function() { return {}; });
-      if (!res.ok || !me.email) throw new Error('Auth failed');
-
-      // Sidebar info
-      var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-      el('sidebarAvatar').textContent = initials;
-      el('sidebarName').textContent = me.approverName || me.email || 'User';
-      el('sidebarRole').textContent = me.isAdmin ? 'Administrator' : 'Approver';
+      me = await Attest.getCurrentUser();
 
       // Greeting — use first name if available
       var displayName = me.approverName || (me.email ? me.email.split('@')[0].split('.')[0] : 'there');
@@ -107,27 +99,14 @@
       el('greeting').textContent = 'Good ' + getTimeOfDay() + ', ' + displayName;
 
       // Show admin-only links
-      if (me.isAdmin) {
+      if (Attest.hasCapability('campaign:manage')) {
         var adminLinks = document.querySelectorAll('.admin-only');
         for (var i = 0; i < adminLinks.length; i++) adminLinks[i].classList.remove('hidden');
       }
 
-      // Populate tenant selector
-      if (me.tenants && me.tenants.length > 1) {
-        var sel = el('tenantSelector');
-        sel.innerHTML = '';
-        me.tenants.forEach(function(t) {
-          var opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = t.name + (t.status !== 'active' ? ' (' + t.status + ')' : '');
-          if (t.id === me.tenantId) opt.selected = true;
-          sel.appendChild(opt);
-        });
-      }
-
       return me;
     } catch(e) {
-      location.href = '/login.html';
+      throw e;
     }
   }
 
@@ -138,12 +117,12 @@
     var sodBadge = el('sodBadge');
 
     // Campaign badge: count of active campaigns
-    fetch('/api/campaigns?status=active').then(function(r){return r.json();}).then(function(camps){
+    Attest.api.json('/api/campaigns?status=active').then(function(camps){
       if (campaignBadge && camps.length > 0) {
         campaignBadge.textContent = camps.length;
         campaignBadge.style.display = '';
       }
-    }).catch(function(){});
+    }).catch(function(err){console.error('Campaign badge failed:',err);});
 
     // Review badge: pending count from stats
     if (reviewBadge && data.pendingCount > 0) {
@@ -152,20 +131,18 @@
     }
 
     // SoD badge: open conflicts
-    fetch('/api/sod/stats').then(function(r){return r.json();}).then(function(stats){
+    Attest.api.json('/api/sod/stats').then(function(stats){
       if (sodBadge && stats.open > 0) {
         sodBadge.textContent = stats.open;
         sodBadge.style.display = '';
       }
-    }).catch(function(){});
+    }).catch(function(err){console.error('SoD badge failed:',err);});
   }
 
   // ── KPI Stats ──
   async function loadStats() {
     try {
-      var res = await fetch('/api/dashboard/stats');
-      var data = await res.json();
-      if (!res.ok) throw new Error('Failed to load stats');
+      var data = await Attest.api.json('/api/dashboard/stats');
 
       // Subtitle
       el('dashboardSubtitle').textContent =
@@ -238,9 +215,7 @@
   var chartInstance = null;
   async function loadChart() {
     try {
-      var res = await fetch('/api/dashboard/progress-by-system');
-      var systems = await res.json();
-      if (!res.ok) throw new Error('API error');
+      var systems = await Attest.api.json('/api/dashboard/progress-by-system');
       var canvas = el('chartCanvas');
       if (!canvas) return;
       if (!systems || !systems.length) {
@@ -259,15 +234,13 @@
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100, ticks: { callback: function(v){return v+'%';} }, grid: { color: 'rgba(0,0,0,.06)' } }, x: { grid: { display: false } } } }
       });
-    } catch(e) { console.error('Chart error:', e); }
+    } catch(e) { console.error('Chart error:', e); Attest.showLoadError(document.querySelector('.content'),e.message||'Could not load dashboard chart.',loadChart); }
   }
 
   // ── Active campaigns ──
   async function loadCampaigns() {
     try {
-      var res = await fetch('/api/dashboard/active-campaigns');
-      var campaigns = await res.json();
-      if (!res.ok) throw new Error('API error');
+      var campaigns = await Attest.api.json('/api/dashboard/active-campaigns');
 
       if (!campaigns || !campaigns.length) {
         el('activeCampaigns').innerHTML =
@@ -294,6 +267,7 @@
       el('activeCampaigns').innerHTML = html;
     } catch(e) {
       el('activeCampaigns').innerHTML = '<div class="text-sm text-muted" style="text-align:center;padding:20px">Campaign data unavailable</div>';
+      Attest.showLoadError(document.querySelector('.content'),e.message||'Could not load active campaigns.',loadCampaigns);
     }
   }
 
@@ -302,6 +276,7 @@
 
   var newCampaignBtn = el('newCampaignBtn');
   if (newCampaignBtn) {
+    Attest.getCurrentUser().then(function(){newCampaignBtn.classList.toggle('hidden',!Attest.hasCapability('campaign:manage'));});
     newCampaignBtn.addEventListener('click', function() {
       location.href = '/campaigns.html';
     });
@@ -318,7 +293,7 @@
 
   boot().catch(function(err) {
     console.error('Dashboard boot failed:', err);
-    if (window.Attest && Attest.showToast) Attest.showToast('Dashboard failed to load. Please refresh.', 'error');
+    Attest.showLoadError(document.querySelector('.content'),err.message||'Dashboard failed to load.',boot);
   });
 
   // ── Search: filter activity items and campaigns ──

@@ -1,5 +1,5 @@
 // Attest — Service Worker for offline caching & PWA
-const CACHE_NAME = 'attest-v1';
+const CACHE_NAME = 'attest-phase1-v2';
 const STATIC_ASSETS = [
   '/',
   '/login.html',
@@ -18,8 +18,10 @@ const STATIC_ASSETS = [
   '/onboarding.html',
   '/offboarding.html',
   '/styles.css',
+  '/components.js',
   '/shared.js',
   '/app.js',
+  '/sod.js',
   '/mobile.js',
 ];
 
@@ -54,7 +56,7 @@ self.addEventListener('fetch', event => {
         // Return cached version, update cache in background
         fetch(event.request).then(res => {
           if (res.ok) caches.open(CACHE_NAME).then(cache => cache.put(event.request, res));
-        }).catch(() => {});
+        }).catch(error => console.warn('Background cache refresh failed:', error));
         return cached;
       }
       return fetch(event.request).then(res => {

@@ -5,7 +5,8 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const XLSX = require('xlsx');
+const { writeWorkbook } = require('../services/excelWorkbook');
+const { backfillLegacySodConflicts } = require('../stores/sodAccessModel');
 
 const REPORTS_DIR = process.env.REPORTS_DIR || path.join(__dirname, '..', 'Reports');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'attest.db');
@@ -92,21 +93,16 @@ const approverRoles = {
 };
 
 // ── Step 1: Generate Excel files ──
-function generateExcelFiles() {
+async function generateExcelFiles() {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 
   // Roles Approvers.xlsx
-  const rolesWb = XLSX.utils.book_new();
-
   // "Complete" sheet
   const completeHeader = ['Role Name', 'Role Description', 'Department', 'Approver Full Name'];
   const completeRows = [completeHeader];
   for (const role of roles) {
     completeRows.push([role.roleName, `Description for ${role.roleName}`, role.roleName.split(' - ')[1] || '', role.approver]);
   }
-  const wsComplete = XLSX.utils.aoa_to_sheet(completeRows);
-  XLSX.utils.book_append_sheet(rolesWb, wsComplete, 'Complete');
-
   // "Emails" sheet — map approver names to emails + admin mapping
   const emailsHeader = ['Full Name', 'Email'];
   const emailsRows = [emailsHeader];
@@ -121,11 +117,11 @@ function generateExcelFiles() {
   if (realAdmin && realAdmin.includes('@')) {
     emailsRows.push([approvers[0].fullName, realAdmin]);
   }
-  const wsEmails = XLSX.utils.aoa_to_sheet(emailsRows);
-  XLSX.utils.book_append_sheet(rolesWb, wsEmails, 'Emails');
-
   const rolesPath = path.join(REPORTS_DIR, process.env.ROLES_FILE_NAME || 'Roles Approvers.xlsx');
-  XLSX.writeFile(rolesWb, rolesPath);
+  await writeWorkbook(rolesPath, [
+    { name: 'Complete', rows: completeRows },
+    { name: 'Emails', rows: emailsRows },
+  ]);
   console.log(`[seed] Generated: ${rolesPath} (${roles.length} roles)`);
 
   // Transactions.xlsx
@@ -139,11 +135,8 @@ function generateExcelFiles() {
       }
     }
   }
-  const wsTx = XLSX.utils.aoa_to_sheet(txRows);
-  const txWb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(txWb, wsTx, 'Transactions');
   const txPath = path.join(REPORTS_DIR, process.env.TX_FILE_NAME || 'Transactions.xlsx');
-  XLSX.writeFile(txWb, txPath);
+  await writeWorkbook(txPath, [{ name: 'Transactions', rows: txRows }]);
   console.log(`[seed] Generated: ${txPath} (${txRows.length - 1} transaction rows)`);
 }
 
@@ -248,6 +241,17 @@ function ensureBetaSeed(db) {
       `BETA_PERMISSION_${index + 1}`,
     ]));
   });
+  db.prepare(`
+    INSERT INTO tenant_transaction_metadata (tenant_id, header_json, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET
+      header_json = excluded.header_json,
+      updated_at = excluded.updated_at
+  `).run(
+    tenantId,
+    JSON.stringify(['Business Role', 'Technical Role', 'Technical Role Description', 'Permission Name']),
+    new Date().toISOString()
+  );
 
   const insertCampaign = db.prepare(`
     INSERT OR IGNORE INTO campaigns
@@ -294,13 +298,13 @@ function ensureBetaSeed(db) {
   db.prepare(`
     INSERT OR IGNORE INTO sod_conflicts
       (id, tenant_id, rule_id, user_email, approver_name, role_a, role_b,
-       severity, detected_at, status, mitigated_by, mitigated_at, mitigation_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', '', '', '')
+       severity, detected_at, status, mitigated_by, mitigated_at, mitigation_notes, subject_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', '', '', '', ?)
   `).run(
     'beta_conflict_001', tenantId, 'beta_sod_finance',
     'synthetic.finance.user@beta.test', 'Avery Chen',
     'BETA - FINANCE - BILLING', 'BETA - FINANCE - CASH APPLICATION',
-    'high', daysAgo(3)
+    'high', daysAgo(3), 'Beta Finance User (Synthetic)'
   );
 
   db.prepare(`
@@ -350,6 +354,7 @@ function seedDatabase() {
       db.prepare("INSERT INTO tenants (id, name, plan, status) VALUES (?, ?, ?, ?)").run('default', 'Default Organization', 'starter', 'active');
     }
     ensureBetaSeed(db);
+    backfillLegacySodConflicts(db);
     return;
   }
 
@@ -411,13 +416,13 @@ function seedDatabase() {
 
   // SoD Conflicts
   const sodConflicts = [
-    { id: 'conf_001', rule_id: 'sod_ap_gl', approver_name: 'Morgan Taylor', role_a: 'BE - FINANCE - ACCOUNTS PAYABLE', role_b: 'BE - FINANCE - GENERAL LEDGER', severity: 'critical', status: 'open', detected_at: daysAgo(5) },
-    { id: 'conf_002', rule_id: 'sod_po_inv', approver_name: 'Morgan Taylor', role_a: 'BE - PROCUREMENT - PURCHASE ORDERS', role_b: 'BE - WAREHOUSE - INVENTORY CONTROL', severity: 'high', status: 'open', detected_at: daysAgo(3) },
-    { id: 'conf_003', rule_id: 'sod_hr_pay', approver_name: 'Jamie Rivera', role_a: 'BE - HR - EMPLOYEE DATA', role_b: 'BE - HR - PAYROLL PROCESSING', severity: 'high', status: 'mitigated', detected_at: daysAgo(7), mitigated_by: 'admin.one@attest.local', mitigated_at: daysAgo(6), mitigation_notes: 'Role split between two departments.' },
+    { id: 'conf_001', rule_id: 'sod_ap_gl', user_email: 'alex.carter@synthetic.default.test', subject_name: 'Alex Carter (Synthetic)', approver_name: 'Morgan Taylor', role_a: 'BE - FINANCE - ACCOUNTS PAYABLE', role_b: 'BE - FINANCE - GENERAL LEDGER', severity: 'critical', status: 'open', detected_at: daysAgo(5) },
+    { id: 'conf_002', rule_id: 'sod_po_inv', user_email: 'sam.river@synthetic.default.test', subject_name: 'Sam River (Synthetic)', approver_name: 'Morgan Taylor', role_a: 'BE - PROCUREMENT - PURCHASE ORDERS', role_b: 'BE - WAREHOUSE - INVENTORY CONTROL', severity: 'high', status: 'open', detected_at: daysAgo(3) },
+    { id: 'conf_003', rule_id: 'sod_hr_pay', user_email: 'taylor.gray@synthetic.default.test', subject_name: 'Taylor Gray (Synthetic)', approver_name: 'Jamie Rivera', role_a: 'BE - HR - EMPLOYEE DATA', role_b: 'BE - HR - PAYROLL PROCESSING', severity: 'high', status: 'mitigated', detected_at: daysAgo(7), mitigated_by: 'admin.one@attest.local', mitigated_at: daysAgo(6), mitigation_notes: 'Compensating review splits HR master-data and payroll approval.' },
   ];
-  const insertSodConflict = db.prepare(`INSERT INTO sod_conflicts (id, tenant_id, rule_id, user_email, approver_name, role_a, role_b, severity, detected_at, status, mitigated_by, mitigated_at, mitigation_notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const insertSodConflict = db.prepare(`INSERT INTO sod_conflicts (id, tenant_id, rule_id, user_email, approver_name, role_a, role_b, severity, detected_at, status, mitigated_by, mitigated_at, mitigation_notes, subject_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   for (const c of sodConflicts) {
-    insertSodConflict.run(c.id, 'default', c.rule_id, '', c.approver_name, c.role_a, c.role_b, c.severity, c.detected_at, c.status, c.mitigated_by || '', c.mitigated_at || '', c.mitigation_notes || '');
+    insertSodConflict.run(c.id, 'default', c.rule_id, c.user_email, c.approver_name, c.role_a, c.role_b, c.severity, c.detected_at, c.status, c.mitigated_by || '', c.mitigated_at || '', c.mitigation_notes || '', c.subject_name);
   }
   console.log('[seed] SoD Conflicts:', sodConflicts.length);
 
@@ -506,6 +511,7 @@ function seedDatabase() {
   console.log('[seed] Notifications:', notifications.length);
 
   ensureBetaSeed(db);
+  backfillLegacySodConflicts(db);
 
   console.log('[seed] ✅ Demo data seeded successfully!');
 }
@@ -513,9 +519,15 @@ function seedDatabase() {
 // ── Main ──
 if (require.main === module) {
   console.log('[seed] Starting seed process...');
-  generateExcelFiles();
-  seedDatabase();
-  console.log('[seed] Done.');
+  generateExcelFiles()
+    .then(() => {
+      seedDatabase();
+      console.log('[seed] Done.');
+    })
+    .catch(err => {
+      console.error('[seed] Failed:', err);
+      process.exitCode = 1;
+    });
 }
 
 module.exports = { generateExcelFiles, seedDatabase };

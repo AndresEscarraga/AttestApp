@@ -34,17 +34,9 @@
   </div>
 <script>
 (function(){
-  var el=function(id){return document.getElementById(id);},token=localStorage.getItem('attest_token');
-  if(!token){location.href='/login.html';}
   // Fetch auth inject handled by shared.js
 
-  fetch('/api/me').then(r=>r.json()).then(me=>{
-    var i=(me.approverName||me.email||'U').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-  });
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  Attest.getCurrentUser().then(function(){if(!Attest.hasCapability('members:manage'))location.href='/dashboard.html';}).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load offboarding.',function(){location.reload();});});
 })();
 </script>
 <script src="/mobile.js"></script>

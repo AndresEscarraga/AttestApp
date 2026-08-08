@@ -26,8 +26,9 @@ class LocalDataStore {
     }
     return safeName;
   }
-  _path(name, tenantId = 'default') {
-    const tid = String(tenantId || 'default').trim();
+  _path(name, tenantId) {
+    const tid = String(tenantId || '').trim();
+    if (!tid) throw new Error('tenantId is required for source path');
     if (!/^[a-zA-Z0-9_-]+$/.test(tid)) throw new Error('Invalid tenant id for source path');
     const tenantDir = tid === 'default' ? this.dir : resolveInside(this.dir, tid);
     return resolveInside(tenantDir, this._safeName(name));

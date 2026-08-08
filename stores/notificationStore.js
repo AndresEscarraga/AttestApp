@@ -17,7 +17,7 @@ function normalize(notif) {
   const n = notif || {};
   return {
     id: n.id || newId(),
-    tenant_id: n.tenant_id || 'default',
+    tenant_id: requireTenantId(n.tenant_id),
     type: VALID_TYPES.includes(n.type) ? n.type : 'system',
     title: String(n.title || '').trim(),
     body: String(n.body || '').trim(),
@@ -58,7 +58,7 @@ class SqliteNotificationStore {
   async readAll(filters = {}) {
     let sql = 'SELECT * FROM notifications WHERE 1=1';
     const params = [];
-    const tenantId = filters.tenant_id || 'default';
+    const tenantId = requireTenantId(filters.tenant_id);
     sql += ' AND tenant_id = ?';
     params.push(tenantId);
 
@@ -89,26 +89,36 @@ class SqliteNotificationStore {
     }));
   }
 
-  async getUnreadCount(tenant_id = 'default') {
+  async getUnreadCount(tenant_id) {
     const row = this.db.prepare(
       'SELECT COUNT(*) as cnt FROM notifications WHERE tenant_id = ? AND read = 0'
-    ).get(tenant_id);
+    ).get(requireTenantId(tenant_id));
     return row ? row.cnt : 0;
   }
 
   async markRead(id, tenant_id) {
-    this.db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND tenant_id = ?')
-      .run(id, String(tenant_id || ''));
+    const result = this.db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND tenant_id = ?')
+      .run(id, requireTenantId(tenant_id));
+    return result.changes > 0;
   }
 
-  async markAllRead(tenant_id = 'default') {
-    this.db.prepare('UPDATE notifications SET read = 1 WHERE tenant_id = ? AND read = 0').run(tenant_id);
+  async markAllRead(tenant_id) {
+    const result = this.db.prepare('UPDATE notifications SET read = 1 WHERE tenant_id = ? AND read = 0').run(requireTenantId(tenant_id));
+    return result.changes;
   }
 
-  async deleteOld(days = 30) {
+  async deleteOld(tenant_id, days = 30) {
     const cutoff = new Date(Date.now() - days * 86400000).toISOString();
-    this.db.prepare('DELETE FROM notifications WHERE created_at < ?').run(cutoff);
+    const result = this.db.prepare('DELETE FROM notifications WHERE tenant_id = ? AND created_at < ?')
+      .run(requireTenantId(tenant_id), cutoff);
+    return result.changes;
   }
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
 function createNotificationStore() {

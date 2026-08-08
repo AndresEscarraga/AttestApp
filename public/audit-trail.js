@@ -2,36 +2,18 @@
 (function () {
   'use strict';
 
-  var token = localStorage.getItem('attest_token');
-  var origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    opts = opts || {}; opts.headers = opts.headers || {};
-    if (token && !opts.headers['Authorization']) opts.headers['Authorization'] = 'Bearer ' + token;
-    return origFetch(url, opts);
-  };
-
   var ACTION_ORDER = ['Keep Business Role','Modify Business Role','Modify Technical Role','Reject Business Role'];
   var RITM_STATUSES = ['Open','Resolved','On Hold','Cancelled'];
   var allEntries = [], sortBy = 'timestamp', sortDir = -1;
   var selApprovers = new Set(), selActions = new Set();
-  var pageSize = 50, offset = 0, hasMore = true;
+  var pageSize = 50, offset = 0, hasMore = true, canUpdateAudit = false;
   var el = function(id) { return document.getElementById(id); };
 
   // Init
   async function boot() {
-    var res = await fetch('/api/me');
-    var me = await res.json().catch(function() { return {}; });
-    if (!res.ok || !me.isAdmin) { location.href = '/'; return; }
-    // Load sidebar user info
-    var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    var av = el('sidebarAvatar'), nm = el('sidebarName'), rl = el('sidebarRole');
-    if (av) av.textContent = initials;
-    if (nm) nm.textContent = me.approverName || me.email || 'User';
-    if (rl) rl.textContent = me.isAdmin ? 'Administrator' : 'Approver';
-    if (me.tenants && me.tenants.length > 1) {
-      var sel = el('tenantSelector');
-      if (sel) { sel.innerHTML = ''; me.tenants.forEach(function(t) { var o = document.createElement('option'); o.value = t.id; o.textContent = t.name; if (t.id === me.tenantId) o.selected = true; sel.appendChild(o); }); }
-    }
+    var me = await Attest.getCurrentUser();
+    if (!(me.capabilities || []).includes('audit:read')) { location.href = '/'; return; }
+    canUpdateAudit=(me.capabilities||[]).includes('audit:update');
     await loadData(true);
     setupFilters();
     var loadMore = el('logLoadMore');
@@ -40,8 +22,7 @@
 
   async function loadData(reset) {
     if (reset) { offset = 0; allEntries = []; hasMore = true; }
-    var res = await fetch('/api/log?limit=' + pageSize + '&offset=' + offset);
-    if (!res.ok) { location.href = '/'; return; }
+    var res = await Attest.api.fetch('/api/log?limit=' + pageSize + '&offset=' + offset);
     var batch = await res.json();
     if (batch.length < pageSize) hasMore = false;
     allEntries = allEntries.concat(batch);
@@ -56,7 +37,6 @@
   // Filters
   function setupFilters() {
     ['filterRole','filterFrom','filterTo'].forEach(function(id) { el(id).addEventListener('input', render); el(id).addEventListener('change', render); });
-    el('exportXlsxBtn').addEventListener('click', exportXlsx);
     el('exportCsvBtn').addEventListener('click', exportCsv);
     el('exportPdfBtn').addEventListener('click', function() { exportPdf().catch(function() { Attest.showToast('PDF export failed','error'); }); });
     var evBtn = el('evidenceExportBtn');
@@ -185,6 +165,7 @@
 
   function ritmCell(entry) {
     var c = document.createElement('td');
+    if(!canUpdateAudit){c.textContent=entry.ritm||'—';return c;}
     var wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
     var inp = document.createElement('input'); inp.type = 'text'; inp.value = entry.ritm || ''; inp.placeholder = 'RITM';
     inp.style.cssText = 'padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px;width:90px';
@@ -194,7 +175,7 @@
       if (!entry.logEntryId) { st.textContent = 'Missing ID'; return; }
       btn.disabled = true; st.textContent = '';
       try {
-        var res = await fetch('/api/log/' + encodeURIComponent(entry.logEntryId) + '/ritm', {
+        var res = await Attest.api.fetch('/api/log/' + encodeURIComponent(entry.logEntryId) + '/ritm', {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ritm: inp.value.trim() })
         });
@@ -209,6 +190,7 @@
 
   function ritmStatusCell(entry) {
     var c = document.createElement('td');
+    if(!canUpdateAudit){c.textContent=entry.ritm?(entry.ritmStatus||'Open'):'—';return c;}
     var wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
     var sel = document.createElement('select'); sel.className = 'ritm-status'; sel.style.cssText = 'padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px';
     RITM_STATUSES.forEach(function(s) { sel.appendChild(new Option(s, s)); });
@@ -218,7 +200,7 @@
       if (!entry.logEntryId) { st.textContent = 'Missing ID'; return; }
       sel.disabled = true; st.textContent = '';
       try {
-        var res = await fetch('/api/log/' + encodeURIComponent(entry.logEntryId) + '/ritm-status', {
+        var res = await Attest.api.fetch('/api/log/' + encodeURIComponent(entry.logEntryId) + '/ritm-status', {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ritmStatus: sel.value })
         });
@@ -254,18 +236,6 @@
     el('recordCount').textContent = data.length.toLocaleString() + ' records';
   }
 
-  // XLSX Export (CSV format, .xlsx extension)
-  function exportXlsx() {
-    var data = filteredSorted();
-    var cols = ['timestamp','approver','roleName','action','ritm','ritmStatus','submissionId'];
-    var esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-    var lines = [cols.join(',')];
-    data.forEach(function(e) { lines.push(cols.map(function(c) { return esc(e[c] || ''); }).join(',')); });
-    var blob = new Blob([lines.join('\n')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'audit-trail-' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(url);
-  }
-
   // CSV Export
   function exportCsv() {
     var data = filteredSorted();
@@ -298,5 +268,5 @@
     doc.save('audit-log-' + new Date().toISOString().slice(0,10) + '.pdf');
   }
 
-  boot();
+  boot().catch(function(err){Attest.showLoadError(document.querySelector('.content')||document.body,err.message||'Could not load audit trail.',function(){boot();});});
 })();

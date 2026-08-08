@@ -8,10 +8,11 @@ const crypto = require('crypto');
 // Delete old DB to start fresh
 const dbPath = path.join(__dirname, '..', 'data', 'attest.db');
 for (const f of [dbPath, dbPath + '-shm', dbPath + '-wal']) {
-  try { fs.unlinkSync(f); } catch {}
+  try { fs.unlinkSync(f); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
 const { getDb } = require('../stores/db');
+const { backfillLegacySodConflicts } = require('../stores/sodAccessModel');
 const db = getDb();
 
 console.log('[seed] DB initialized with all tables.');
@@ -146,6 +147,8 @@ for (const a of activities) {
   insertActivity.run(uid('act_'), 'default', hoursAgo(a.hours), a.type, a.action, a.email, a.detail);
 }
 console.log('[seed] Activity events:', activities.length);
+
+backfillLegacySodConflicts(db);
 
 console.log('[seed] ✅ Mockup data seeded successfully!');
 process.exit(0);

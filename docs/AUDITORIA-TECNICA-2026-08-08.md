@@ -391,6 +391,75 @@ Implementado el 2026-08-08:
 
 Validación ejecutada: `npm test` verde tanto sobre base temporal limpia como mediante prueba de migración sobre una copia de la base de desarrollo existente. Esto completa la base multi-tenant del primer slice, no todos los entregables restantes de la Fase 1.
 
+### Estado de implementación — cierre Fase 1, bloque 1A (contexto y autorización)
+
+Implementado el 2026-08-08, pendiente de la validación integral al finalizar todos los bloques:
+
+- un único `req.context` inmutable contiene principal, membership, tenant, rol, roles de negocio y capabilities;
+- la API ya no publica ni consume los aliases paralelos `req.auth`, `req.tenantId` o `req.tenantContext`;
+- API keys y usuarios atraviesan el mismo resolvedor de principal/tenant, sin fallback silencioso si una key o JWT explícitos son inválidos;
+- política central de capabilities para `admin`, `approver`, `auditor` y API keys, aplicada server-side por endpoint;
+- stores de runtime dejan de seleccionar `default` cuando el caller omite tenant; ahora rechazan la operación;
+- headers de transacciones se persisten por tenant en vez de conservarse como metadata global compartida;
+- decisiones asociadas a campaña validan tenant, estado activo, scope del approver y duplicados;
+- campañas validan framework, fecha, approvers y transiciones de estado; sólo drafts sin decisiones/evidencia pueden eliminarse.
+
+### Estado de implementación — cierre Fase 1, bloque 1B (estabilidad, middleware y dependencias)
+
+Implementado y validado el 2026-08-08:
+
+- middleware único de error JSON, `requestId` propagado en header/respuesta y códigos coherentes para errores de API;
+- headers de seguridad base y `Cache-Control: no-store` para API, sin introducir clasificación ni restricciones adicionales del ambiente de desarrollo;
+- rate limiting de autenticación por IP+email con `Retry-After`, verificado mediante integración;
+- eliminación de catches vacíos en rutas reales de carga/mutación y estados visibles de error con acción de retry;
+- eliminación de la dependencia vulnerable `xlsx`; import/generación pasa por un adaptador acotado de `exceljs` con límites de hojas, filas y columnas;
+- upload de roles/transacciones validado antes del reemplazo, swap atómico con rollback y recarga exclusiva del tenant activo;
+- eliminación del estado global `uniqueApprovers` y de metadata global de transacciones; ambos se resuelven desde el catálogo tenant-scoped.
+
+### Estado de implementación — cierre Fase 1, bloque 1C (frontend tenant-aware)
+
+Implementado y validado el 2026-08-08:
+
+- `shared.js` es la fuente única de usuario, memberships, tenant activo y capabilities;
+- un solo `apiClient` inyecta autenticación, aplica timeout, normaliza errores y registra cada request en una generación de tenant;
+- el switch A → B aborta requests en vuelo, invalida respuestas tardías, descarta usuario/permisos anteriores y recarga el contexto completo;
+- login, navegación y reload conservan el tenant activo autorizado; los drafts de Reviews incluyen `tenantId` en su clave;
+- Dashboard, Reviews, Campaigns, Audit Trail, Activity, SoD, Evidence, Data Sources, Users & Roles, API Keys, Settings y Tenants usan el cliente común;
+- acciones visibles quedan gobernadas por capability y la API conserva la decisión final server-side;
+- cambios de rol de membership se persisten por `(tenant_id,email)`; un usuario puede ser admin en A y auditor/approver en B sin alterar la otra membresía.
+
+### Estado de implementación — adelanto funcional SoD solicitado (ATT-009 y ATT-049)
+
+Implementado y validado el 2026-08-08, adelantando esta porción del modelo previsto para Fase 2:
+
+- la detección dejó de evaluar el portafolio del approver: ahora usa `subject → account → effective entitlement assignment` dentro del tenant y snapshot;
+- el review owner se conserva como metadata separada y nunca se interpreta como el sujeto que posee acceso;
+- conflictos guardan `subject_id`, email/nombre sintéticos, assignments A/B, aplicaciones, cuentas y `source_snapshot_id`;
+- detección idempotente por `(tenant, rule, subject, snapshot)`; repetir el job no duplica findings y una resolución vencida se reabre;
+- reglas incompatibles se normalizan, rechazan pares duplicados/idénticos y se archivan sin borrar findings históricos;
+- máquina de estados validada: `open → mitigated | risk_accepted | false_positive`, y cualquier disposición sólo puede volver a `open`;
+- mitigación y aceptación de riesgo requieren razón, owner, evidencia y fecha futura; `risk_accepted` registra al admin aprobador;
+- cada transición genera un evento histórico tenant-scoped; la UI permite resolver, aceptar riesgo, clasificar falso positivo y reabrir;
+- seed A/B incorpora sujetos y assignments sintéticos distintos de los approvers, manteniendo todos los flujos probables en desarrollo.
+
+Queda para Fase 2 la industrialización del modelo —ingesta real/versionada de assignments, PostgreSQL/RLS, snapshots completos de campaña y ejecución por worker—, no la semántica funcional básica de SoD ya implementada.
+
+### Estado de implementación — gate de salida Fase 1
+
+Validado el 2026-08-08:
+
+- matriz negativa de capabilities para `approver` y `auditor` sobre operaciones privilegiadas; admin conserva acceso por tenant;
+- pruebas A/B read/write/delete para campañas, memberships/roles, RITM, SoD, evidencia, notificaciones, settings, API keys, fuentes y actividad;
+- copiar IDs de B y usarlos con sesión A devuelve `404/403` sin lectura ni mutación;
+- crear/modificar en B persiste exclusivamente en B; uploads B no cambian catálogo ni transacciones de A;
+- prueba Playwright que retrasa una respuesta A durante el switch confirma que nunca pinta después de activar B;
+- recorrido Playwright A → B → A sobre 14 páginas, incluyendo workflow UI de mitigación y reapertura SoD;
+- `npm test`, `npm run test:integration` y `npm run test:e2e` verdes;
+- `npm audit --audit-level=high` verde: cero vulnerabilidades high/critical. Permanecen cuatro moderadas y una low transitivas, fuera del gate acordado;
+- scan sin `catch {}` vacío en runtime y sin dependencia/import de `xlsx`.
+
+**Resultado:** los entregables y gates señalados para Fase 1 quedan implementados. No se aplicaron banners, clasificación de ambiente, retiro de seed, allowlists/VPN ni separación de infraestructura; esos trabajos permanecen expresamente aplazados al último bloque de lanzamiento.
+
 ### Entregables
 
 - Principal/membership/tenant context único.
@@ -487,10 +556,10 @@ Esto no implica crear ahora comandos especiales, reset, banners ni clasificació
 ### Entregables
 
 - PostgreSQL + RLS, migrations transaccionales y backups con restore probado.
-- Modelo identity/account/entitlement/assignment/review item.
+- Completar el modelo identity/account/entitlement/assignment/review item sobre persistencia de lanzamiento. El slice efectivo requerido por SoD ya está implementado en SQLite para desarrollo/seed.
 - Campaign scope snapshot e imports versionados por tenant.
 - State machines e idempotency/optimistic concurrency.
-- SoD por subject y entitlement efectivo, con mitigación/risk acceptance.
+- Industrializar SoD ya funcional: ingesta versionada real, snapshots completos, RLS y worker; subject/effective entitlement, mitigación y risk acceptance ya están implementados en el slice de desarrollo.
 - Outbox y worker para import, detección y evidencia.
 
 ### Gate de salida

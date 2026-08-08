@@ -2,7 +2,7 @@
 // Produces lightweight files with only the columns actually used by the app.
 // Usage: node scripts/generate-sample-data.js
 
-const XLSX = require('xlsx');
+const { writeWorkbook } = require('../services/excelWorkbook');
 const path = require('path');
 const fs = require('fs');
 
@@ -80,7 +80,7 @@ const roleToTechnical = {
 };
 
 // ─── Generate Roles Approvers.xlsx ───
-function generateRolesApprovers() {
+async function generateRolesApprovers() {
   // Sheet "Complete"
   const completeHeader = ['Role Name', 'Role Description', 'Department', 'Approver Full Name'];
   const completeRows = [completeHeader];
@@ -95,19 +95,16 @@ function generateRolesApprovers() {
     emailsRows.push([a.fullName, a.email]);
   }
 
-  const wb = XLSX.utils.book_new();
-  const wsComplete = XLSX.utils.aoa_to_sheet(completeRows);
-  const wsEmails = XLSX.utils.aoa_to_sheet(emailsRows);
-  XLSX.utils.book_append_sheet(wb, wsComplete, 'Complete');
-  XLSX.utils.book_append_sheet(wb, wsEmails, 'Emails');
-
   const filePath = path.join(REPORTS_DIR, 'Roles Approvers.xlsx');
-  XLSX.writeFile(wb, filePath);
+  await writeWorkbook(filePath, [
+    { name: 'Complete', rows: completeRows },
+    { name: 'Emails', rows: emailsRows },
+  ]);
   console.log(`Generated: ${filePath} (${roles.length} roles, ${approvers.length} approvers)`);
 }
 
 // ─── Generate Transactions.xlsx ───
-function generateTransactions() {
+async function generateTransactions() {
   const header = ['Role Name', 'Associated Role', 'Associated Role Description', 'Permission Name'];
   const rows = [header];
 
@@ -129,12 +126,8 @@ function generateTransactions() {
     }
   }
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
   const filePath = path.join(REPORTS_DIR, 'Transactions.xlsx');
-  XLSX.writeFile(wb, filePath);
+  await writeWorkbook(filePath, [{ name: 'Transactions', rows }]);
   console.log(`Generated: ${filePath} (${rows.length - 1} transaction rows)`);
 }
 
@@ -143,6 +136,9 @@ if (!fs.existsSync(REPORTS_DIR)) {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
 
-generateRolesApprovers();
-generateTransactions();
-console.log('Done. Synthetic Excel files generated successfully.');
+Promise.all([generateRolesApprovers(), generateTransactions()])
+  .then(() => console.log('Done. Synthetic Excel files generated successfully.'))
+  .catch(err => {
+    console.error('Synthetic Excel generation failed:', err);
+    process.exitCode = 1;
+  });

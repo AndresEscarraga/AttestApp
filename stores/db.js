@@ -31,10 +31,27 @@ function getDb() {
   `);
 
   // Helper: run a migration only once
-  function migrate(name, sql) {
+  function migrate(name, sql, ignoreError) {
     const exists = db.prepare("SELECT name FROM _migrations WHERE name = ?").get(name);
     if (exists) return;
-    db.exec(sql);
+    try {
+      db.exec(sql);
+      db.prepare("INSERT INTO _migrations (name) VALUES (?)").run(name);
+      console.log('[db] Migration applied: ' + name);
+    } catch(e) {
+      if (ignoreError) {
+        console.log('[db] Migration skipped (already exists): ' + name);
+        db.prepare("INSERT OR IGNORE INTO _migrations (name) VALUES (?)").run(name);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  function migrateData(name, callback) {
+    const exists = db.prepare("SELECT name FROM _migrations WHERE name = ?").get(name);
+    if (exists) return;
+    callback(db);
     db.prepare("INSERT INTO _migrations (name) VALUES (?)").run(name);
     console.log('[db] Migration applied: ' + name);
   }
@@ -104,7 +121,7 @@ function getDb() {
   `);
 
   // ── Phase 2b: Add campaign_id to submissions ──
-  migrate('002b_campaign_id', "ALTER TABLE submissions ADD COLUMN campaign_id TEXT DEFAULT ''");
+  migrate('002b_campaign_id', "ALTER TABLE submissions ADD COLUMN campaign_id TEXT DEFAULT ''", true);
 
   // ── Phase 3: SoD Rules + Conflicts + Evidence ──
   migrate('003_sod_evidence', `
@@ -284,6 +301,140 @@ function getDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_role_transactions_role
       ON tenant_role_transactions(tenant_id, role_name);
+  `);
+
+  migrate('007_tenant_transaction_metadata', `
+    CREATE TABLE IF NOT EXISTS tenant_transaction_metadata (
+      tenant_id TEXT PRIMARY KEY,
+      header_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Effective identity/account/entitlement assignments and auditable SoD resolution.
+  migrate('008_sod_effective_access', `
+    CREATE TABLE IF NOT EXISTS access_subjects (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      external_key TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      display_name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      source_snapshot_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (tenant_id, id),
+      UNIQUE (tenant_id, external_key)
+    );
+    CREATE TABLE IF NOT EXISTS access_applications (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      external_key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (tenant_id, id),
+      UNIQUE (tenant_id, external_key)
+    );
+    CREATE TABLE IF NOT EXISTS access_accounts (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      application_id TEXT NOT NULL,
+      account_name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (tenant_id, id),
+      UNIQUE (tenant_id, application_id, account_name),
+      FOREIGN KEY (tenant_id, subject_id) REFERENCES access_subjects(tenant_id, id),
+      FOREIGN KEY (tenant_id, application_id) REFERENCES access_applications(tenant_id, id)
+    );
+    CREATE TABLE IF NOT EXISTS access_entitlements (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      application_id TEXT NOT NULL,
+      external_key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      entitlement_type TEXT NOT NULL DEFAULT 'business_role',
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (tenant_id, id),
+      UNIQUE (tenant_id, application_id, external_key),
+      FOREIGN KEY (tenant_id, application_id) REFERENCES access_applications(tenant_id, id)
+    );
+    CREATE TABLE IF NOT EXISTS access_entitlement_assignments (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      entitlement_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      valid_from TEXT NOT NULL,
+      valid_to TEXT NOT NULL DEFAULT '',
+      source_snapshot_id TEXT NOT NULL,
+      review_owner_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (tenant_id, id),
+      UNIQUE (tenant_id, subject_id, account_id, entitlement_id, source_snapshot_id),
+      FOREIGN KEY (tenant_id, subject_id) REFERENCES access_subjects(tenant_id, id),
+      FOREIGN KEY (tenant_id, account_id) REFERENCES access_accounts(tenant_id, id),
+      FOREIGN KEY (tenant_id, entitlement_id) REFERENCES access_entitlements(tenant_id, id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_access_subjects_tenant ON access_subjects(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_access_assignments_subject ON access_entitlement_assignments(tenant_id, subject_id, status);
+    CREATE INDEX IF NOT EXISTS idx_access_assignments_entitlement ON access_entitlement_assignments(tenant_id, entitlement_id, status);
+  `);
+  migrate('008b_sod_rule_lifecycle', `
+    ALTER TABLE sod_rules ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE sod_rules ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+  `);
+  migrate('008c_sod_conflict_evidence', `
+    ALTER TABLE sod_conflicts ADD COLUMN subject_id TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN subject_name TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN assignment_a_id TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN assignment_b_id TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN source_snapshot_id TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN resolution_reason TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN resolution_owner TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN resolution_expires_at TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN resolution_evidence TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN approved_by TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN approved_at TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sod_conflicts ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+  `);
+  migrate('008d_sod_resolution_events', `
+    CREATE TABLE IF NOT EXISTS sod_resolution_events (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      conflict_id TEXT NOT NULL,
+      from_status TEXT NOT NULL,
+      to_status TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      owner TEXT NOT NULL,
+      expires_at TEXT NOT NULL DEFAULT '',
+      evidence_ref TEXT NOT NULL DEFAULT '',
+      actor TEXT NOT NULL,
+      approved_by TEXT NOT NULL DEFAULT '',
+      approved_at TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sod_resolution_history
+      ON sod_resolution_events(tenant_id, conflict_id, created_at DESC);
+  `);
+  migrateData('008e_sod_effective_access_backfill', database => {
+    require('./sodAccessModel').backfillLegacySodConflicts(database);
+  });
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sod_rule_pair
+      ON sod_rules(tenant_id, role_a, role_b);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sod_conflict_effective_unique
+      ON sod_conflicts(tenant_id, rule_id, subject_id, source_snapshot_id)
+      WHERE subject_id <> '' AND source_snapshot_id <> '';
   `);
 
   db.exec(`

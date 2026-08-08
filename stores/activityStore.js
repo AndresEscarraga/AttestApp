@@ -38,7 +38,8 @@ class SqliteActivityStore {
   async readAll(filters = {}) {
     let sql = 'SELECT * FROM activity WHERE 1=1';
     const params = [];
-    const tenantId = filters.tenantId || 'default';
+    const tenantId = String(filters.tenantId || '').trim();
+    if (!tenantId) throw new Error('tenantId is required');
     sql += ' AND tenant_id = ?';
     params.push(tenantId);
     if (filters.type) { sql += ' AND type = ?'; params.push(filters.type); }

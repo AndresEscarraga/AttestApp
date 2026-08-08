@@ -68,19 +68,11 @@
   </div>
 <script>
 (function(){
-  var el=function(id){return document.getElementById(id);},token=localStorage.getItem('attest_token');
-  if(!token){location.href='/login.html';}
+  var el=function(id){return document.getElementById(id);};
   // Fetch auth inject handled by shared.js
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
-
   function loadDataStatus(){
-    fetch('/api/admin/data-status').then(function(r){if(!r.ok)throw new Error('Could not load data source status');return r.json();}).then(function(data){
+    return Attest.api.json('/api/admin/data-status').then(function(data){
       el('rolesBadge').textContent=data.roles.file?'Last upload: '+new Date(data.roles.file.modified).toLocaleDateString():'Seed catalog';
       el('rolesInfo').textContent=data.roles.total+' roles · '+data.roles.approvers+' approvers';
       el('txBadge').textContent=data.transactions.file?'Last upload: '+new Date(data.transactions.file.modified).toLocaleDateString():'Seed catalog';
@@ -101,17 +93,17 @@
   async function uploadFile(file,endpoint,statusEl,reloadFn){
     statusEl.innerHTML='<span class="upload-pending">Uploading '+file.name+'...</span>';
     var fd=new FormData();fd.append('file',file);
-    try{var res=await fetch(endpoint,{method:'POST',body:fd});var r=await res.json().catch(function(){return{};});if(!res.ok)throw new Error(r.error||'Upload failed');
+    try{var r=await Attest.api.json(endpoint,{method:'POST',body:fd});
       statusEl.innerHTML='<span class="upload-success">'+r.message+'</span>';loadDataStatus();
     }catch(e){statusEl.innerHTML='<span class="upload-error">'+e.message+'</span>';}
   }
 
   setupDrop('rolesDrop','rolesFileInput','rolesUploadStatus','/api/admin/upload-roles');
   setupDrop('txDrop','txFileInput','txUploadStatus','/api/admin/upload-transactions');
-  loadDataStatus();
-
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  Attest.getCurrentUser().then(function(me){
+    if(!Attest.hasCapability('data-source:manage')){location.href='/dashboard.html';return;}
+    return loadDataStatus();
+  }).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load data source status.',loadDataStatus);});
 })();
 </script>
 <script src="/mobile.js"></script>

@@ -15,7 +15,7 @@ function normalizeCampaign(raw) {
   const c = raw || {};
   return {
     id: c.id || newCampaignId(),
-    tenant_id: c.tenant_id || 'default',
+    tenant_id: String(c.tenant_id || '').trim(),
     name: String(c.name || '').trim(),
     description: String(c.description || '').trim(),
     framework: VALID_FRAMEWORKS.includes(c.framework) ? c.framework : 'SOX',

@@ -31,12 +31,19 @@ class RoleCatalogStore {
     })(assignments);
   }
 
-  replaceTransactions(tenantId, byRole) {
+  replaceTransactions(tenantId, byRole, header = []) {
     const tid = requireTenantId(tenantId);
     const remove = this.db.prepare('DELETE FROM tenant_role_transactions WHERE tenant_id = ?');
     const insert = this.db.prepare(`
       INSERT INTO tenant_role_transactions (tenant_id, role_name, row_index, row_json)
       VALUES (?, ?, ?, ?)
+    `);
+    const upsertMetadata = this.db.prepare(`
+      INSERT INTO tenant_transaction_metadata (tenant_id, header_json, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(tenant_id) DO UPDATE SET
+        header_json = excluded.header_json,
+        updated_at = excluded.updated_at
     `);
     this.db.transaction((catalog) => {
       remove.run(tid);
@@ -45,7 +52,22 @@ class RoleCatalogStore {
           insert.run(tid, roleName, index, JSON.stringify(row));
         });
       }
+      upsertMetadata.run(tid, JSON.stringify(Array.isArray(header) ? header : []), new Date().toISOString());
     })(byRole);
+  }
+
+  getTransactionHeader(tenantId) {
+    const row = this.db.prepare(
+      'SELECT header_json FROM tenant_transaction_metadata WHERE tenant_id = ?'
+    ).get(requireTenantId(tenantId));
+    if (!row) return [];
+    try {
+      const header = JSON.parse(row.header_json);
+      return Array.isArray(header) ? header : [];
+    } catch (err) {
+      console.error('Invalid transaction header metadata:', err);
+      return [];
+    }
   }
 
   listRoleNames(tenantId) {

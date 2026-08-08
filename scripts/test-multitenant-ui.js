@@ -33,7 +33,7 @@ child.stdout.on('data', chunk => { stdout += chunk.toString(); });
 child.stderr.on('data', chunk => { stderr += chunk.toString(); });
 
 async function waitForServer() {
-  for (let attempt = 0; attempt < 80; attempt += 1) {
+  for (let attempt = 0; attempt < 250; attempt += 1) {
     try {
       if ((await fetch(`${baseUrl}/healthz`)).ok) return;
     } catch {}
@@ -82,11 +82,32 @@ async function run() {
     return body && body.textContent.includes('Q3 SOX ITGC');
   });
 
+  await page.evaluate(() => localStorage.removeItem('attest_e2e_stale_render'));
+  await page.route('**/api/campaigns?e2e_delay=1', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    try { await route.continue(); } catch (error) { if (!String(error.message || error).includes('closed')) console.warn(error.message || error); }
+  });
+  const delayedRequest = page.waitForRequest(request => request.url().includes('/api/campaigns?e2e_delay=1'));
+  await page.evaluate(() => {
+    window.Attest.api.json('/api/campaigns?e2e_delay=1')
+      .then(() => localStorage.setItem('attest_e2e_stale_render', 'painted-A-after-switch'))
+      .catch(error => {
+        if (!['AbortError','StaleTenantResponseError'].includes(error.name)) {
+          localStorage.setItem('attest_e2e_stale_render', `unexpected:${error.name}`);
+        }
+      });
+  });
+  await delayedRequest;
+
   await Promise.all([
     page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
     page.selectOption('#tenantSelector', 'tenant-beta'),
   ]);
   await waitForTenant(page, 'tenant-beta');
+  await page.waitForTimeout(1400);
+  assert.equal(await page.evaluate(() => localStorage.getItem('attest_e2e_stale_render')), null, 'A late Tenant A response must never render after switching to Tenant B');
+  assert.equal(await page.evaluate(() => localStorage.getItem('attest_active_tenant')), 'tenant-beta');
+  await page.unroute('**/api/campaigns?e2e_delay=1');
   await page.waitForFunction(() => {
     const body = document.getElementById('campaignsBody');
     return body && body.textContent.includes('BETA — Q4 Access Review');
@@ -120,6 +141,18 @@ async function run() {
 
   await page.goto(`${baseUrl}/dashboard.html`, { waitUntil: 'domcontentloaded' });
   await waitForTenant(page, 'tenant-beta');
+  await page.waitForFunction(() => {
+    const dashboardLink = document.querySelector('.sidebar-item[href="/dashboard.html"]');
+    const campaignsLink = document.querySelector('.sidebar-item[href="/campaigns.html"]');
+    return dashboardLink && campaignsLink
+      && getComputedStyle(dashboardLink).display !== 'none'
+      && getComputedStyle(campaignsLink).display !== 'none';
+  });
+  assert.equal(
+    await page.locator('.sidebar-nav .sidebar-item:visible').count() > 0,
+    true,
+    'The capability filter must not leave an authorized user with an empty sidebar navigation.',
+  );
   await page.waitForFunction(() => document.body.textContent.includes('BETA — Q4 Access Review'));
 
   await page.goto(`${baseUrl}/audit-trail.html`, { waitUntil: 'domcontentloaded' });
@@ -129,6 +162,28 @@ async function run() {
   await page.goto(`${baseUrl}/sod.html`, { waitUntil: 'domcontentloaded' });
   await waitForTenant(page, 'tenant-beta');
   await page.waitForFunction(() => document.body.textContent.includes('BETA-SOD-001'));
+  await page.waitForFunction(() => document.getElementById('conflictsBody').textContent.includes('Beta Finance User (Synthetic)'));
+  const sodConflictText = await page.textContent('#conflictsBody');
+  assert(sodConflictText.includes('synthetic.finance.user@beta.test'));
+  await page.click('#conflictsBody .resolve-btn');
+  await page.waitForSelector('#resolutionModal:not(.hidden)');
+  await page.selectOption('#resolutionStatus', 'mitigated');
+  await page.fill('#resolutionOwner', 'Beta Compensating Control Owner');
+  await page.fill('#resolutionReason', 'Synthetic compensating review verified by E2E');
+  await page.fill('#resolutionEvidence', 'synthetic://e2e/control-001');
+  await page.fill('#resolutionExpiry', await page.evaluate(() => {
+    const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  }));
+  await page.click('#resolutionModalSave');
+  await page.waitForFunction(() => document.getElementById('resolutionModal').classList.contains('hidden') && document.getElementById('conflictsBody').textContent.includes('Mitigated'));
+  await page.click('#conflictsBody .resolve-btn');
+  await page.selectOption('#resolutionStatus', 'open');
+  await page.fill('#resolutionOwner', 'Beta Compensating Control Owner');
+  await page.fill('#resolutionReason', 'Synthetic mitigation revoked by E2E');
+  await page.click('#resolutionModalSave');
+  await page.waitForFunction(() => document.getElementById('resolutionModal').classList.contains('hidden') && document.getElementById('conflictsBody').textContent.includes('Open'));
 
   await page.goto(`${baseUrl}/evidence.html`, { waitUntil: 'domcontentloaded' });
   await waitForTenant(page, 'tenant-beta');

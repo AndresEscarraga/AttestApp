@@ -59,15 +59,8 @@
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
-
   function loadKeys(){
-    fetch('/api/api-keys').then(function(r){return r.json();}).then(function(data){state.keys=data;render();});
+    return Attest.api.json('/api/api-keys').then(function(data){state.keys=data;render();}).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load API keys.',loadKeys);});
   }
   function render(){
     var tbody=el('keysBody');
@@ -86,7 +79,7 @@
     tbody.innerHTML=html;
     tbody.querySelectorAll('.revoke-btn').forEach(function(b){b.addEventListener('click',function(){revokeKey(b.dataset.id);});});
   }
-  async function revokeKey(id){if(!await Attest.confirm('Revoke this API key? It will stop working immediately.','Revoke Key'))return;await fetch('/api/api-keys/'+id,{method:'DELETE'});loadKeys();}
+  async function revokeKey(id){if(!await Attest.confirm('Revoke this API key? It will stop working immediately.','Revoke Key'))return;try{await Attest.api.fetch('/api/api-keys/'+id,{method:'DELETE'});await loadKeys();}catch(err){Attest.showToast(err.message,'error');}}
   function openModal(){el('keyModal').classList.remove('hidden');el('modalError').textContent='';el('keyName').value='';el('keyResult').classList.add('hidden');el('modalGenerate').style.display='';el('modalGenerate').textContent='Generate Key';}
   function closeModal(){el('keyModal').classList.add('hidden');}
   el('genKeyBtn').addEventListener('click',openModal);
@@ -94,8 +87,7 @@
   el('modalGenerate').addEventListener('click',function(){
     var name=el('keyName').value.trim();if(!name){el('modalError').textContent='Key name is required.';return;}
     var btn=el('modalGenerate');btn.disabled=true;btn.textContent='Generating...';
-    fetch('/api/api-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,permissions:el('keyPerms').value})})
-    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});return r.json();})
+    Attest.api.json('/api/api-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,permissions:el('keyPerms').value})})
     .then(function(data){
       el('keyValue').value=data.key;el('keyResult').classList.remove('hidden');el('modalGenerate').style.display='none';
       loadKeys();
@@ -103,12 +95,10 @@
     .catch(function(e){el('modalError').textContent=e.message;btn.disabled=false;btn.textContent='Generate Key';});
   });
   el('keyModal').addEventListener('click',function(e){
-    if(e.target.classList.contains('copyKeyBtn')){var inp=el('keyValue');inp.select();try{navigator.clipboard.writeText(inp.value);e.target.textContent='Copied!';setTimeout(function(){var b=document.querySelector('.copyKeyBtn');if(b)b.textContent='Copy';},1500);}catch(e){}}
+    if(e.target.classList.contains('copyKeyBtn')){var inp=el('keyValue');inp.select();navigator.clipboard.writeText(inp.value).then(function(){e.target.textContent='Copied!';setTimeout(function(){var b=document.querySelector('.copyKeyBtn');if(b)b.textContent='Copy';},1500);}).catch(function(err){Attest.showToast(err.message||'Could not copy key.','error');});}
   });
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
-  loadKeys();
+  Attest.getCurrentUser().then(function(){if(!Attest.hasCapability('api-key:manage')){location.href='/dashboard.html';return;}return loadKeys();}).catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load API keys.',function(){location.reload();});});
 })();
 </script>
 <script src="/mobile.js"></script>

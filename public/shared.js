@@ -2,28 +2,98 @@
 // Include this script on every page. No other page should duplicate auth/darkmode/signout logic.
 (function(){
   'use strict';
+  var Attest=window.Attest=window.Attest||{};
   var token=localStorage.getItem('attest_token');
   var isLocalDev=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname.includes('.local');
+  var origFetch=window.fetch.bind(window);
+  var apiState={user:null,userPromise:null,tenantId:null,generation:0,controllers:new Set()};
 
   // ── Auth: redirect to login only in production when no token ──
   if(!token&&!isLocalDev&&location.pathname!=='/login.html'){
     location.href='/login.html';return;
   }
 
-  // ── Auth header inject (runs before page JS, so all fetch() calls get the token) ──
-  var origFetch=window.fetch;
-  window.fetch=function(input,opts){
-    opts=opts||{};
+  function ApiError(message,status,code,requestId){
+    this.name='ApiError';this.message=message||'Request failed.';this.status=status||0;this.code=code||'REQUEST_FAILED';this.requestId=requestId||'';
+  }
+  ApiError.prototype=Object.create(Error.prototype);
+
+  function staleTenantError(){
+    var err=new Error('The response belongs to an inactive tenant context.');
+    err.name='StaleTenantResponseError';
+    err.code='STALE_TENANT_RESPONSE';
+    return err;
+  }
+
+  function abortTenantRequests(){
+    apiState.generation+=1;
+    apiState.controllers.forEach(function(controller){controller.abort();});
+    apiState.controllers.clear();
+  }
+
+  function apiFetch(input,opts){
+    opts=Object.assign({},opts||{});
     var url=typeof input==='string'?new URL(input,location.href):new URL(input.url,location.href);
-    if(url.origin===location.origin){
-      var baseHeaders=opts.headers||(typeof Request!=='undefined'&&input instanceof Request?input.headers:undefined);
-      var headers=new Headers(baseHeaders||{});
-      token=localStorage.getItem('attest_token');
-      if(token&&!headers.has('Authorization'))headers.set('Authorization','Bearer '+token);
-      opts.headers=headers;
+    if(url.origin!==location.origin)return origFetch(input,opts);
+    var generation=apiState.generation;
+    var controller=new AbortController();
+    var callerSignal=opts.signal;
+    if(callerSignal){
+      if(callerSignal.aborted)controller.abort();
+      else callerSignal.addEventListener('abort',function(){controller.abort();},{once:true});
     }
-    return origFetch(input,opts);
-  };
+    opts.signal=controller.signal;
+    var baseHeaders=opts.headers||(typeof Request!=='undefined'&&input instanceof Request?input.headers:undefined);
+    var headers=new Headers(baseHeaders||{});
+    token=localStorage.getItem('attest_token');
+    if(token&&!headers.has('Authorization'))headers.set('Authorization','Bearer '+token);
+    headers.set('X-Attest-Client-Generation',String(generation));
+    opts.headers=headers;
+    apiState.controllers.add(controller);
+    var timeoutMs=Number(opts.timeoutMs)||15000;
+    delete opts.timeoutMs;
+    var timeout=setTimeout(function(){controller.abort();},timeoutMs);
+    return origFetch(input,opts).then(async function(response){
+      if(generation!==apiState.generation)throw staleTenantError();
+      if(!response.ok){
+        var payload={};
+        try{payload=await response.clone().json();}catch(parseError){payload={};}
+        throw new ApiError(payload.error||('HTTP '+response.status),response.status,payload.code,payload.requestId||response.headers.get('X-Request-ID'));
+      }
+      return response;
+    }).catch(function(err){
+      if(generation!==apiState.generation)throw staleTenantError();
+      if(err&&err.name==='AbortError'){
+        var aborted=new Error('Request cancelled or timed out.');aborted.name='AbortError';aborted.code='REQUEST_ABORTED';throw aborted;
+      }
+      throw err;
+    }).finally(function(){
+      clearTimeout(timeout);apiState.controllers.delete(controller);
+    });
+  }
+
+  async function apiJson(input,opts){
+    var response=await apiFetch(input,opts);
+    if(response.status===204)return null;
+    return response.json();
+  }
+
+  function getCurrentUser(force){
+    if(apiState.user&&!force)return Promise.resolve(apiState.user);
+    if(apiState.userPromise&&!force)return apiState.userPromise;
+    apiState.userPromise=apiJson('/api/me').then(function(me){
+      apiState.user=Object.freeze(me);
+      apiState.tenantId=me.tenantId;
+      localStorage.setItem('attest_active_tenant',me.tenantId);
+      window.__attestUser=apiState.user;
+      return apiState.user;
+    }).finally(function(){apiState.userPromise=null;});
+    return apiState.userPromise;
+  }
+
+  Attest.api={fetch:apiFetch,json:apiJson,abortAll:abortTenantRequests,get generation(){return apiState.generation;}};
+  Attest.getCurrentUser=getCurrentUser;
+  Attest.hasCapability=function(capability){return !!apiState.user&&Array.isArray(apiState.user.capabilities)&&apiState.user.capabilities.includes(capability);};
 
   // ── Dark mode from saved preference ──
   var saved=localStorage.getItem('attest_theme');
@@ -81,7 +151,7 @@
 
   // ── Load user info into sidebar (runs once on DOM ready) ──
   function loadSidebarUser() {
-    fetch('/api/me').then(function(r){return r.json().catch(function(){return{};});}).then(function(me){
+    getCurrentUser().then(function(me){
       if(!me||!me.email)return;
       // Avatar initials
       var initials=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
@@ -112,19 +182,18 @@
       populateTenantSelector(me);
 
       // Role-based sidebar visibility
-      applyRoleVisibility(me.role || (me.isAdmin ? 'admin' : 'approver'));
+      applyCapabilityVisibility(me);
       // Update sidebar role label
       if(rl) {
         var roleLabels = {admin:'Administrator', approver:'Approver', auditor:'Auditor'};
         rl.textContent = roleLabels[me.role] || (me.isAdmin ? 'Administrator' : 'Approver');
       }
 
-      // Store user info globally for page scripts to use
-      window.__attestUser=me;
       // Fire event so page scripts know user is loaded
       document.dispatchEvent(new CustomEvent('attest:userLoaded',{detail:me}));
     }).catch(function(err){
       console.error('Could not load current tenant context:',err);
+      showLoadError(document.querySelector('.main-content')||document.body,'Could not load the active organization.',loadSidebarUser);
     });
   }
 
@@ -157,9 +226,13 @@
   async function switchTenant(tenantId,previousTenantId,selector){
     if(!tenantId||tenantId===previousTenantId)return;
     if(selector)selector.disabled=true;
+    abortTenantRequests();
+    apiState.user=null;
+    apiState.userPromise=null;
+    if(notifState.polling){clearInterval(notifState.polling);notifState.polling=null;}
     document.dispatchEvent(new CustomEvent('attest:tenantChanging',{detail:{from:previousTenantId,to:tenantId}}));
     try{
-      var response=await fetch('/api/auth/switch-tenant',{
+      var response=await apiFetch('/api/auth/switch-tenant',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({tenant_id:tenantId})
@@ -167,7 +240,10 @@
       var data=await response.json().catch(function(){return{};});
       if(!response.ok||!data.token)throw new Error(data.error||'Failed to switch organization.');
       localStorage.setItem('attest_token',data.token);
+      localStorage.setItem('attest_active_tenant',tenantId);
       token=data.token;
+      apiState.tenantId=tenantId;
+      document.dispatchEvent(new CustomEvent('attest:tenantChanged',{detail:{from:previousTenantId,to:tenantId}}));
       location.reload();
     }catch(err){
       if(selector){selector.value=previousTenantId;selector.disabled=false;}
@@ -204,7 +280,7 @@
 
     // Register service worker for offline caching
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js').catch(function(){});
+      navigator.serviceWorker.register('/sw.js').catch(function(err){console.warn('Service worker registration failed:',err);});
     }
 
     // Inject PWA manifest link
@@ -242,11 +318,11 @@
     var markAll = document.getElementById('notifMarkAll');
     if(markAll) markAll.addEventListener('click', function(e){
       e.stopPropagation();
-      fetch('/api/notifications/read-all', { method:'PATCH' }).then(function(){
+      apiFetch('/api/notifications/read-all', { method:'PATCH' }).then(function(){
         notifState.unread = 0;
         updateBadge();
         loadNotifications();
-      });
+      }).catch(function(err){showToast(err.message||'Could not update notifications.','error');});
     });
 
     // Initial load + poll every 30s
@@ -255,10 +331,10 @@
   }
 
   function fetchUnreadCount(){
-    fetch('/api/notifications/unread-count').then(function(r){return r.json();}).then(function(d){
+    apiJson('/api/notifications/unread-count').then(function(d){
       notifState.unread = d.count || 0;
       updateBadge();
-    }).catch(function(){});
+    }).catch(function(err){console.error('Unread notification count failed:',err);});
   }
 
   function updateBadge(){
@@ -273,7 +349,7 @@
   }
 
   function loadNotifications(){
-    fetch('/api/notifications?limit=20').then(function(r){return r.json();}).then(function(d){
+    apiJson('/api/notifications?limit=20').then(function(d){
       var list = document.getElementById('notifList');
       if(!list) return;
       var notifs = d.notifications || [];
@@ -301,7 +377,7 @@
           var id = item.dataset.id;
           var link = item.dataset.link;
           // Mark as read
-          fetch('/api/notifications/' + id + '/read', { method:'PATCH' });
+          apiFetch('/api/notifications/' + id + '/read', { method:'PATCH' }).catch(function(err){showToast(err.message||'Could not update notification.','error');});
           item.classList.remove('unread');
           if(notifState.unread > 0) notifState.unread--;
           updateBadge();
@@ -309,7 +385,10 @@
           if(link) location.href = link;
         });
       });
-    }).catch(function(){});
+    }).catch(function(err){
+      var list=document.getElementById('notifList');
+      if(list)showLoadError(list,'Could not load notifications.',loadNotifications);
+    });
   }
 
   function timeSince(date){
@@ -329,37 +408,19 @@
   }
 
   // ── Role-based UI visibility ──
-  function applyRoleVisibility(role) {
-    var roleRank = { admin:3, approver:2, auditor:1 };
-    var userRank = roleRank[role] || 1;
-
-    // Add role class to body for CSS targeting
-    document.body.classList.add('role-' + role);
-
-    // Show/hide sidebar sections based on data-min-role
-    var sections = document.querySelectorAll('.sidebar-section[data-min-role]');
-    sections.forEach(function(section) {
-      var minRole = section.getAttribute('data-min-role');
-      var minRank = roleRank[minRole] || 3;
-      section.style.display = userRank >= minRank ? '' : 'none';
+  function applyCapabilityVisibility(me) {
+    var role=me.role||'auditor';
+    var capabilities=me.capabilities||[];
+    var roleRequirements={admin:'members:manage',approver:'review:submit',auditor:'dashboard:read'};
+    document.body.classList.add('role-'+role);
+    document.querySelectorAll('[data-capability],[data-min-role]').forEach(function(element){
+      var required=element.getAttribute('data-capability')||roleRequirements[element.getAttribute('data-min-role')]||'dashboard:read';
+      element.style.display=capabilities.includes(required)?'':'none';
     });
-
-    // Show/hide individual sidebar items with data-min-role
-    var items = document.querySelectorAll('.sidebar-item[data-min-role]');
-    items.forEach(function(item) {
-      var minRole = item.getAttribute('data-min-role');
-      var minRank = roleRank[minRole] || 3;
-      item.style.display = userRank >= minRank ? '' : 'none';
+    document.querySelectorAll('.sidebar-section').forEach(function(section){
+      var visible=Array.from(section.querySelectorAll('.sidebar-item')).some(function(item){return item.style.display!=='none';});
+      if(!visible)section.style.display='none';
     });
-
-    // Hide onboarding/offboarding nav section if empty (approver has no items in Review)
-    var reviewSection = document.querySelector('.sidebar-section[data-min-role="approver"]');
-    if (reviewSection && userRank < 2) {
-      var visibleItems = reviewSection.querySelectorAll('.sidebar-item:not([style*="display: none"])');
-      if (!visibleItems.length || (visibleItems.length === 1 && visibleItems[0].getAttribute('data-min-role') === 'admin')) {
-        reviewSection.style.display = 'none';
-      }
-    }
   }
 
   // ── View Transitions API — smooth crossfade between pages ──
@@ -443,6 +504,28 @@
     toastTimer = setTimeout(function() { if (toast.parentNode) toast.remove(); }, 5000);
   }
 
+  function showLoadError(container,message,retry){
+    if(!container)return;
+    var existing=container.querySelector('.attest-load-error');
+    if(existing)existing.remove();
+    var box=document.createElement('div');
+    box.className='attest-load-error';
+    box.setAttribute('role','alert');
+    var text=document.createElement('span');text.textContent=message||'Could not load data.';box.appendChild(text);
+    if(typeof retry==='function'){
+      var button=document.createElement('button');button.type='button';button.className='btn btn-sm btn-secondary';button.textContent='Retry';
+      button.addEventListener('click',function(){box.remove();retry();});box.appendChild(button);
+    }
+    container.appendChild(box);
+    return box;
+  }
+
+  function clearLoadError(container){
+    if(!container)return;
+    var existing=container.querySelector('.attest-load-error');
+    if(existing)existing.remove();
+  }
+
   // ── Retry wrapper for fetch ──
   function fetchWithRetry(url, opts, maxRetries) {
     maxRetries = maxRetries || 2;
@@ -451,11 +534,11 @@
       var attempt = 0;
       function tryFetch() {
         attempt++;
-        window.fetch(url, opts).then(function(res) {
-          if (!res.ok && attempt <= maxRetries) throw new Error('HTTP ' + res.status);
+        apiFetch(url, opts).then(function(res) {
           resolve(res);
         }).catch(function(err) {
-          if (attempt <= maxRetries) {
+          var retryable=!err.status||err.status>=500||err.code==='REQUEST_ABORTED';
+          if (retryable&&attempt <= maxRetries) {
             setTimeout(tryFetch, 1000 * attempt);
           } else {
             reject(err);
@@ -546,12 +629,13 @@
   }
 
   // Expose helpers globally
-  window.Attest={};
-  window.Attest.fmtDate=function(iso){try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return iso;}};
-  window.Attest.escHtml=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
-  window.Attest.el=function(id){return document.getElementById(id);};
-  window.Attest.showToast=showToast;
-  window.Attest.fetchWithRetry=fetchWithRetry;
+  Attest.fmtDate=function(iso){try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return iso;}};
+  Attest.escHtml=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+  Attest.el=function(id){return document.getElementById(id);};
+  Attest.showToast=showToast;
+  Attest.showLoadError=showLoadError;
+  Attest.clearLoadError=clearLoadError;
+  Attest.fetchWithRetry=fetchWithRetry;
 
   // ── Confirm Dialog (replaces native confirm) ──
   var confirmModal=null,confirmResolve=null;

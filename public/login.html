@@ -114,13 +114,14 @@
       var res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: mode, email: email, password: password, name: name })
+        body: JSON.stringify({ action: mode, email: email, password: password, name: name, tenant_id: localStorage.getItem('attest_active_tenant') || undefined })
       });
       var data = await res.json().catch(function() { return {}; });
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
 
       // Store token
       localStorage.setItem('attest_token', data.token);
+      localStorage.setItem('attest_active_tenant', data.tenantId);
       localStorage.setItem('attest_user', JSON.stringify({ email: data.email, isAdmin: data.isAdmin, approverName: data.approverName }));
 
       // Redirect — ensure we never bounce back to root

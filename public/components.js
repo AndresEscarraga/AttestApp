@@ -65,30 +65,30 @@
         this.innerHTML =
           '<aside class="sidebar">' +
             '<attest-logo></attest-logo>' +
-            '<div class="sidebar-tenant"><select id="tenantSelector"><option value="default">Default Organization</option></select></div>' +
+            '<div class="sidebar-tenant"><select id="tenantSelector" disabled><option value="">Loading organizations…</option></select></div>' +
             '<nav class="sidebar-nav">' +
-              '<div class="sidebar-section" data-min-role="auditor"><div class="sidebar-section-label">Overview</div>' +
-                '<a class="sidebar-item'+act('dashboard')+'" href="/dashboard.html">'+I.dashboard+'Dashboard</a>' +
-                '<a class="sidebar-item'+act('campaigns')+'" href="/campaigns.html" data-min-role="approver">'+I.campaigns+'Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>' +
+              '<div class="sidebar-section" data-capability="dashboard:read"><div class="sidebar-section-label">Overview</div>' +
+                '<a class="sidebar-item'+act('dashboard')+'" href="/dashboard.html" data-capability="dashboard:read">'+I.dashboard+'Dashboard</a>' +
+                '<a class="sidebar-item'+act('campaigns')+'" href="/campaigns.html" data-capability="campaign:read">'+I.campaigns+'Campaigns<span class="item-badge" id="campaignBadge" style="display:none">0</span></a>' +
               '</div>' +
-              '<div class="sidebar-section" data-min-role="approver"><div class="sidebar-section-label">Review</div>' +
-                '<a class="sidebar-item'+act('reviews')+'" href="/reviews.html">'+I.reviews+'My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>' +
-                '<a class="sidebar-item'+act('onboarding')+'" href="/onboarding.html" data-min-role="admin">'+I.onboarding+'Onboarding<span class="item-tag">NEW</span></a>' +
-                '<a class="sidebar-item'+act('offboarding')+'" href="/offboarding.html" data-min-role="admin">'+I.offboarding+'Offboarding</a>' +
+              '<div class="sidebar-section" data-capability="review:read"><div class="sidebar-section-label">Review</div>' +
+                '<a class="sidebar-item'+act('reviews')+'" href="/reviews.html" data-capability="review:read">'+I.reviews+'My Reviews<span class="item-badge" id="reviewBadge" style="display:none">0</span></a>' +
+                '<a class="sidebar-item'+act('onboarding')+'" href="/onboarding.html" data-capability="members:manage">'+I.onboarding+'Onboarding<span class="item-tag">NEW</span></a>' +
+                '<a class="sidebar-item'+act('offboarding')+'" href="/offboarding.html" data-capability="members:manage">'+I.offboarding+'Offboarding</a>' +
               '</div>' +
-              '<div class="sidebar-section" data-min-role="auditor"><div class="sidebar-section-label">Audit & Compliance</div>' +
-                '<a class="sidebar-item'+act('audit-trail')+'" href="/audit-trail.html">'+I.audit+'Audit Trail</a>' +
-                '<a class="sidebar-item'+act('sod')+'" href="/sod.html" data-min-role="approver">'+I.sod+'SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>' +
-                '<a class="sidebar-item'+act('evidence')+'" href="/evidence.html">'+I.evidence+'Evidence Locker</a>' +
+              '<div class="sidebar-section"><div class="sidebar-section-label">Audit & Compliance</div>' +
+                '<a class="sidebar-item'+act('audit-trail')+'" href="/audit-trail.html" data-capability="audit:read">'+I.audit+'Audit Trail</a>' +
+                '<a class="sidebar-item'+act('sod')+'" href="/sod.html" data-capability="sod:read">'+I.sod+'SoD Conflicts<span class="item-badge" id="sodBadge" style="display:none">0</span></a>' +
+                '<a class="sidebar-item'+act('evidence')+'" href="/evidence.html" data-capability="evidence:read">'+I.evidence+'Evidence Locker</a>' +
               '</div>' +
-              '<div class="sidebar-section" data-min-role="admin"><div class="sidebar-section-label">Administration</div>' +
-                '<a class="sidebar-item'+act('data-sources')+'" href="/data-sources.html">'+I.datasource+'Data Sources</a>' +
-                '<a class="sidebar-item'+act('admin-users')+'" href="/admin-users.html">'+I.users+'Users & Roles</a>' +
-                '<a class="sidebar-item'+act('tenants')+'" href="/tenants.html">'+I.tenants+'Tenants</a>' +
+              '<div class="sidebar-section"><div class="sidebar-section-label">Administration</div>' +
+                '<a class="sidebar-item'+act('data-sources')+'" href="/data-sources.html" data-capability="data-source:manage">'+I.datasource+'Data Sources</a>' +
+                '<a class="sidebar-item'+act('admin-users')+'" href="/admin-users.html" data-capability="members:manage">'+I.users+'Users & Roles</a>' +
+                '<a class="sidebar-item'+act('tenants')+'" href="/tenants.html" data-capability="tenant:read">'+I.tenants+'Tenants</a>' +
               '</div>' +
-              '<div class="sidebar-section" data-min-role="admin"><div class="sidebar-section-label">Settings</div>' +
-                '<a class="sidebar-item'+act('settings')+'" href="/settings.html">'+I.settings+'Configuration</a>' +
-                '<a class="sidebar-item'+act('api-keys')+'" href="/api-keys.html">'+I.apikeys+'API Keys</a>' +
+              '<div class="sidebar-section"><div class="sidebar-section-label">Settings</div>' +
+                '<a class="sidebar-item'+act('settings')+'" href="/settings.html" data-capability="settings:read">'+I.settings+'Configuration</a>' +
+                '<a class="sidebar-item'+act('api-keys')+'" href="/api-keys.html" data-capability="api-key:manage">'+I.apikeys+'API Keys</a>' +
               '</div>' +
             '</nav>' +
             '<div class="sidebar-footer"><div class="sidebar-user" id="sidebarUserArea" title="Click for options">' +

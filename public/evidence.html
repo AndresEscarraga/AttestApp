@@ -46,7 +46,7 @@
   </div>
 <script>
 (function(){
-  var el=function(id){return document.getElementById(id);},state={packages:[]};
+  var el=function(id){return document.getElementById(id);},state={packages:[],canManage:false};
   // Auth handled by shared.js
 // Fetch auth inject handled by shared.js
 
@@ -57,8 +57,12 @@
   // Sidebar user info handled by shared.js — no need to duplicate
 
   function loadPackages(){
-    fetch('/api/evidence').then(function(r){return r.json();}).then(function(data){state.packages=data;render();});
-    fetch('/api/campaigns').then(function(r){return r.json();}).then(function(camps){var sel=el('pkgCampaign');camps.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});});
+    return Promise.all([Attest.api.json('/api/evidence'),Attest.api.json('/api/campaigns')]).then(function(results){
+      state.packages=results[0];
+      var sel=el('pkgCampaign');sel.innerHTML='<option value="">All submissions</option>';
+      results[1].forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+      render();
+    }).catch(function(err){Attest.showLoadError(el('evidenceBody').parentElement,err.message||'Could not load evidence packages.',loadPackages);});
   }
   function render(){
     var tbody=el('evidenceBody');
@@ -71,16 +75,16 @@
         '<td>'+(p.share_token?'<span class="badge badge-success">Shared</span>':'<span class="badge badge-neutral">Internal only</span>')+'</td>'+
         '<td><div class="btn-group">'+
           '<a class="btn btn-ghost btn-sm" href="/api/evidence/'+p.id+'/download">Download</a>'+
-          (p.share_token?'':'<button class="btn btn-ghost btn-sm share-btn" data-id="'+p.id+'">Share</button>')+
-          '<button class="btn btn-ghost btn-sm del-btn" data-id="'+p.id+'" style="color:var(--danger)">Delete</button>'+
+          (state.canManage&&!p.share_token?'<button class="btn btn-ghost btn-sm share-btn" data-id="'+p.id+'">Share</button>':'')+
+          (state.canManage?'<button class="btn btn-ghost btn-sm del-btn" data-id="'+p.id+'" style="color:var(--danger)">Delete</button>':'')+
         '</div></td></tr>';
     });
     tbody.innerHTML=html;
     tbody.querySelectorAll('.share-btn').forEach(function(b){b.addEventListener('click',function(){sharePackage(b.dataset.id);});});
-    tbody.querySelectorAll('.del-btn').forEach(function(b){b.addEventListener('click',async function(){if(!await Attest.confirm('Delete this evidence package?','Delete'))return;fetch('/api/evidence/'+b.dataset.id,{method:'DELETE'}).then(loadPackages);});});
+    tbody.querySelectorAll('.del-btn').forEach(function(b){b.addEventListener('click',async function(){if(!await Attest.confirm('Delete this evidence package?','Delete'))return;Attest.api.fetch('/api/evidence/'+b.dataset.id,{method:'DELETE'}).then(loadPackages).catch(function(err){Attest.showToast(err.message,'error');});});});
   }
   async function sharePackage(id){
-    var r=await fetch('/api/evidence/'+id+'/share',{method:'POST'});var d=await r.json();
+    var d=await Attest.api.json('/api/evidence/'+id+'/share',{method:'POST'});
     Attest.alert('Share link (valid 7 days):\n'+window.location.origin+d.shareUrl,'Link Generated');
   }
   function openModal(){el('generateModal').classList.remove('hidden');el('modalError').textContent='';el('pkgName').value='Evidence_Package_'+new Date().toISOString().slice(0,10);}
@@ -93,14 +97,18 @@
   el('modalClose').addEventListener('click',closeModal);el('modalCancel').addEventListener('click',closeModal);
   el('modalGenerate').addEventListener('click',function(){
     var btn=el('modalGenerate');Attest.btnLoading(btn,true,'Generating…');
-    fetch('/api/evidence/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:el('pkgName').value||'Package',campaignId:el('pkgCampaign').value,description:el('pkgDescription').value})})
-    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadPackages();})
+    Attest.api.fetch('/api/evidence/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:el('pkgName').value||'Package',campaignId:el('pkgCampaign').value,description:el('pkgDescription').value})})
+    .then(function(){closeModal();return loadPackages();})
     .catch(function(e){el('modalError').textContent=e.message;})
     .finally(function(){Attest.btnLoading(btn,false);});
   });
   // Dark mode & sign out handled by shared.js — no need to duplicate
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
-  loadPackages();
+  Attest.getCurrentUser().then(function(){
+    state.canManage=Attest.hasCapability('evidence:manage');
+    el('generateBtn').classList.toggle('hidden',!state.canManage);
+    return loadPackages();
+  }).catch(function(err){Attest.showLoadError(el('evidenceBody').parentElement,err.message||'Could not load evidence packages.',function(){location.reload();});});
 })();
 </script>
 <script src="/mobile.js"></script>

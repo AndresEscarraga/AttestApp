@@ -88,7 +88,7 @@
 (function() {
   'use strict';
   var el = function(id) { return document.getElementById(id); };
-  var state = { tenants: [], editingId: null };
+  var state = { tenants: [], editingId: null, tenantId: null, canCreate: false, canManage: false };
 
   // Auth handled by shared.js
 // Fetch auth inject handled by shared.js
@@ -98,35 +98,20 @@
 
   async function loadUser() {
     try {
-      var res = await fetch('/api/me');
-      var me = await res.json().catch(function() { return {}; });
-      if (!res.ok || !me.isAdmin) { location.href = '/'; return; }
-      var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-      el('sidebarAvatar').textContent = initials;
-      el('sidebarName').textContent = me.approverName || me.email || 'User';
-      el('sidebarRole').textContent = 'Administrator';
-      // Populate tenant selector
-      if (me.tenants && me.tenants.length > 1) {
-        var sel = el('tenantSelector');
-        if (sel) {
-          sel.innerHTML = '';
-          me.tenants.forEach(function(t) {
-            var o = document.createElement('option');
-            o.value = t.id; o.textContent = t.name;
-            if (t.id === me.tenantId) o.selected = true;
-            sel.appendChild(o);
-          });
-        }
-      }
-    } catch(e) { location.href = '/login.html'; }
+      var me = await Attest.getCurrentUser();
+      state.tenantId=me.tenantId;
+      state.canCreate=Attest.hasCapability('tenant:create');
+      state.canManage=Attest.hasCapability('tenant:manage');
+      if (!Attest.hasCapability('tenant:read')) { location.href = '/dashboard.html'; return; }
+      el('newTenantBtn').classList.toggle('hidden',!state.canCreate);
+    } catch(e) { throw e; }
   }
 
   async function loadTenants() {
     try {
-      var res = await fetch('/api/tenants');
-      state.tenants = await res.json();
+      state.tenants = await Attest.api.json('/api/tenants');
       render();
-    } catch(e) {}
+    } catch(e) { Attest.showLoadError(document.querySelector('.content'),e.message||'Could not load tenants.',loadTenants); }
   }
 
   function render() {
@@ -151,9 +136,8 @@
         '<td><span class="badge ' + statusBadge + '">' + t.status + '</span></td>' +
         '<td class="text-sm text-muted">' + fmtDate(t.created_at) + '</td>' +
         '<td><div class="btn-group">' +
-          (t.status === 'active' ? '<button class="btn btn-xs btn-secondary suspend-btn" data-id="' + t.id + '">Suspend</button>' : '') +
-          (t.status === 'suspended' ? '<button class="btn btn-xs btn-success activate-btn" data-id="' + t.id + '">Activate</button>' : '') +
-          (t.id !== 'default' ? '<button class="btn btn-xs btn-ghost delete-btn" data-id="' + t.id + '" style="color:var(--danger)">Delete</button>' : '') +
+          (state.canManage && t.id===state.tenantId && t.status === 'active' ? '<button class="btn btn-xs btn-secondary suspend-btn" data-id="' + t.id + '">Suspend</button>' : '') +
+          (state.canManage && t.id===state.tenantId && t.status === 'suspended' ? '<button class="btn btn-xs btn-success activate-btn" data-id="' + t.id + '">Activate</button>' : '') +
         '</div></td>' +
       '</tr>';
     });
@@ -165,28 +149,17 @@
     tbody.querySelectorAll('.activate-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { updateTenant(btn.dataset.id, 'active'); });
     });
-    tbody.querySelectorAll('.delete-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { deleteTenant(btn.dataset.id); });
-    });
   }
 
   async function updateTenant(id, status) {
     try {
-      await fetch('/api/tenants/' + id, {
+      await Attest.api.fetch('/api/tenants/' + id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
       loadTenants();
     } catch(e) { Attest.showToast('Failed to update tenant.','error'); }
-  }
-
-  async function deleteTenant(id) {
-    if (!await Attest.confirm('Delete this tenant? All associated data will be orphaned.','Delete')) return;
-    try {
-      await fetch('/api/tenants/' + id, { method: 'DELETE' });
-      loadTenants();
-    } catch(e) { Attest.showToast('Failed to delete tenant.','error'); }
   }
 
   // Modal
@@ -207,12 +180,11 @@
     var name = el('tenantName').value.trim();
     if (!name) { el('modalError').textContent = 'Organization name is required.'; return; }
     try {
-      var res = await fetch('/api/tenants', {
+      await Attest.api.fetch('/api/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, plan: el('tenantPlan').value })
       });
-      if (!res.ok) { var err = await res.json().catch(function(){return{};}); throw new Error(err.error || 'Failed'); }
       el('tenantModal').classList.add('hidden');
       loadTenants();
     } catch(e) { el('modalError').textContent = e.message; }
@@ -222,7 +194,7 @@
     await loadUser();
     await loadTenants();
   }
-  boot();
+  boot().catch(function(err){Attest.showLoadError(document.querySelector('.content'),err.message||'Could not load tenants.',boot);});
 })();
 </script>
 <script src="/mobile.js"></script>

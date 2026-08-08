@@ -49,7 +49,7 @@
   </div>
 <script>
 (function(){
-  var el=function(id){return document.getElementById(id);},state={campaigns:[]};
+  var el=function(id){return document.getElementById(id);},state={campaigns:[],canManage:false};
   // Auth handled by shared.js
 // Fetch auth inject handled by shared.js
 
@@ -59,13 +59,13 @@
   // Sidebar user info handled by shared.js — no need to duplicate
 
   function loadCampaigns(){
-    fetch('/api/campaigns').then(function(r){return r.json();}).then(function(data){
+    return Attest.api.fetch('/api/campaigns').then(function(r){return r.json();}).then(function(data){
       state.campaigns=data;
       // Update badge
       var active=data.filter(function(c){return c.status==='active';}).length;
       var badge=el('campaignBadge');if(badge&&active>0){badge.textContent=active;badge.style.display='';}
       render();
-    });
+    }).catch(function(err){Attest.showLoadError(el('campaignsBody').parentElement,err.message||'Could not load campaigns.',loadCampaigns);});
   }
   function render(){
     var tbody=el('campaignsBody');
@@ -84,23 +84,23 @@
         '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="progress-fill '+(progressPct>=100?'fill-green':'fill-teal')+'" style="width:'+progressPct+'%"></div></div>'+progressPct+'%</div></td>'+
         '<td><span class="badge '+stBadge+'">'+stLabel+'</span></td>'+
         '<td><div class="btn-group">'+
-          (c.status==='draft'?'<button class="btn btn-ghost btn-sm act-btn" data-action="active" data-id="'+c.id+'">Activate</button>':'')+
-          (c.status==='active'?'<button class="btn btn-ghost btn-sm act-btn" data-action="completed" data-id="'+c.id+'">Complete</button>':'')+
-          (c.status==='completed'?'<button class="btn btn-ghost btn-sm act-btn" data-action="archived" data-id="'+c.id+'">Archive</button>':'')+
-          (c.status!=='active'?'<button class="btn btn-ghost btn-sm act-btn" data-action="delete" data-id="'+c.id+'" style="color:var(--danger)">Delete</button>':'')+
+          (state.canManage&&c.status==='draft'?'<button class="btn btn-ghost btn-sm act-btn" data-action="active" data-id="'+c.id+'">Activate</button>':'')+
+          (state.canManage&&c.status==='active'?'<button class="btn btn-ghost btn-sm act-btn" data-action="completed" data-id="'+c.id+'">Complete</button>':'')+
+          (state.canManage&&c.status==='completed'?'<button class="btn btn-ghost btn-sm act-btn" data-action="archived" data-id="'+c.id+'">Archive</button>':'')+
+          (state.canManage&&c.status==='draft'?'<button class="btn btn-ghost btn-sm act-btn" data-action="delete" data-id="'+c.id+'" style="color:var(--danger)">Delete</button>':'')+
         '</div></td></tr>';
     });
     tbody.innerHTML=html;
     tbody.querySelectorAll('.act-btn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();handleAction(b.dataset.action,b.dataset.id);});});
   }
   async function handleAction(action,id){
-    if(action==='delete'){if(!await Attest.confirm('Delete this campaign?','Delete'))return;await fetch('/api/campaigns/'+id,{method:'DELETE'});loadCampaigns();return;}
+    if(action==='delete'){if(!await Attest.confirm('Delete this campaign?','Delete'))return;await Attest.api.fetch('/api/campaigns/'+id,{method:'DELETE'});loadCampaigns();return;}
     var ns={active:'active',completed:'completed',archived:'archived'}[action];if(!ns)return;
-    await fetch('/api/campaigns/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:ns})});
+    await Attest.api.fetch('/api/campaigns/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:ns})});
     loadCampaigns();
   }
   function openModal(){el('campaignModal').classList.remove('hidden');el('modalError').textContent='';el('campName').value='';el('campDeadline').value='';
-    fetch('/api/approvers').then(function(r){return r.json();}).then(function(a){var s=el('approverSelect');s.innerHTML='';a.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});});
+    Attest.api.fetch('/api/approvers').then(function(r){return r.json();}).then(function(a){var s=el('approverSelect');s.innerHTML='';a.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});}).catch(function(err){el('modalError').textContent=err.message;});
   }
   function closeModal(){
     var m=el('campaignModal');
@@ -113,14 +113,14 @@
     var name=el('campName').value.trim();if(!name){el('modalError').textContent='Campaign name is required.';return;}
     var btn=el('modalSave');Attest.btnLoading(btn,true,'Creating…');
     var sel=el('approverSelect');var apps=[];for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)apps.push(sel.options[i].value);}
-    fetch('/api/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,framework:el('campFramework').value,period:el('campPeriod').value,deadline:el('campDeadline').value,approvers:apps})})
+    Attest.api.fetch('/api/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,framework:el('campFramework').value,period:el('campPeriod').value,deadline:el('campDeadline').value,approvers:apps})})
     .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadCampaigns();})
     .catch(function(e){el('modalError').textContent=e.message;})
     .finally(function(){Attest.btnLoading(btn,false);});
   });
   // Dark mode & sign out handled by shared.js — no need to duplicate
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
-  loadCampaigns();
+  Attest.getCurrentUser().then(function(me){state.canManage=(me.capabilities||[]).includes('campaign:manage');el('newCampaignBtn').style.display=state.canManage?'':'none';return loadCampaigns();}).catch(function(err){Attest.showLoadError(el('campaignsBody').parentElement,err.message||'Could not load campaigns.',function(){location.reload();});});
 })();
 </script>
 <script src="/mobile.js"></script>

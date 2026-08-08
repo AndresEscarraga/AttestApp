@@ -14,11 +14,9 @@
   // Init
   async function loadCurrentUser() {
     try {
-      const res = await fetch('/api/me');
-      const me = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(me.error || 'Could not verify your access.');
+      const me = await Attest.getCurrentUser();
       state.email = me.email || '';
-      state.tenantId = me.tenantId || 'default';
+      state.tenantId = me.tenantId;
       state.isAdmin = !!me.isAdmin;
       const params = new URLSearchParams(location.search);
       const imp = params.get('impersonate');
@@ -36,11 +34,12 @@
       init();
     } catch (e) {
       console.error('Access denied:', e.message || 'Unauthorized');
+      Attest.showLoadError(document.querySelector('.content')||document.body,e.message||'Could not load reviews.',loadCurrentUser);
     }
   }
 
   async function loadApproverProfile(name, imp) {
-    const res = await fetch('/api/roles/by-approver', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approver:name}) });
+    const res = await Attest.api.fetch('/api/roles/by-approver', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approver:name}) });
     const roles = await res.json().catch(() => []);
     if (!res.ok) throw new Error(roles.error || 'Could not load roles.');
     state.approver = name; state.approverRoles = Array.isArray(roles) ? roles : []; state.impersonated = !!imp;
@@ -51,7 +50,7 @@
   var conflictedRoles = {}; // roleName -> true if conflicted
   async function loadSodConflicts(approverName) {
     try {
-      var res = await fetch('/api/sod/conflicts?approver_name=' + encodeURIComponent(approverName) + '&status=open');
+      var res = await Attest.api.fetch('/api/sod/conflicts?approver_name=' + encodeURIComponent(approverName) + '&status=open');
       var conflicts = await res.json();
       conflictedRoles = {};
       conflicts.forEach(function(c) {
@@ -70,7 +69,7 @@
           if (sel) { sel.value = 'Reject Business Role'; sel.style.background = '#FEF2F2'; sel.style.borderColor = '#FECACA'; }
         }
       });
-    } catch(e) {}
+    } catch(e) { console.error('Could not load SoD conflicts:',e); Attest.showToast(e.message||'Could not load SoD conflicts.','error'); }
   }
 
   function updateSidebar() {
@@ -114,7 +113,7 @@
 
   function showAdminImpersonationPanel() {
     // Fetch available approvers for impersonation
-    fetch('/api/approvers').then(function(r){return r.json();}).then(function(approvers){
+    Attest.api.fetch('/api/approvers').then(function(r){return r.json();}).then(function(approvers){
       var tbody = document.getElementById('reviewTableBody');
       if (!tbody) return;
 
@@ -148,9 +147,9 @@
       if (h1) h1.textContent = 'My Role Reviews';
       var sub = document.querySelector('.content-header p');
       if (sub) sub.textContent = 'Impersonate an approver to certify their business roles.';
-    }).catch(function(){
+    }).catch(function(err){
       var tbody = document.getElementById('reviewTableBody');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6"><div style="text-align:center;padding:40px;color:var(--text-tertiary)">Could not load approvers.</div></td></tr>';
+      if (tbody) Attest.showLoadError(tbody.parentElement,err.message||'Could not load approvers.',showAdminImpersonationPanel);
     });
   }
 
@@ -227,7 +226,7 @@
 
   // ── Bulk transaction loading (replaces N individual fetches) ──
   function loadBulkTransactions(roles) {
-    fetch('/api/transactions/bulk', {
+    Attest.api.fetch('/api/transactions/bulk', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({roles: roles})
@@ -258,12 +257,12 @@
       });
       // Restore draft after all rows populated
       setTimeout(restoreDraft, 100);
-    }).catch(function(){
-      // Fallback: mark all as unavailable
+    }).catch(function(err){
       var rows = document.querySelectorAll('#reviewTableBody tr');
       rows.forEach(function(tr){
         if (tr._tdTech) tr._tdTech.textContent = '—';
       });
+      Attest.showLoadError(document.getElementById('reviewTableBody').parentElement,err.message||'Could not load permissions.',function(){loadBulkTransactions(roles);});
     });
   }
 
@@ -312,7 +311,7 @@
       btn.closest('tr').dataset.txAcknowledged='true'; backdrop.remove(); updateStats();
     });
 
-    fetch('/api/transactions?role='+encodeURIComponent(roleName)).then(function(r){return r.json()}).then(function(data){
+    Attest.api.fetch('/api/transactions?role='+encodeURIComponent(roleName)).then(function(r){return r.json()}).then(function(data){
       const th = backdrop.querySelector('#txTable thead'), tb = backdrop.querySelector('#txTable tbody');
       if (data.header && data.header.length) {
         const trh = document.createElement('tr');
@@ -325,7 +324,7 @@
         tb.appendChild(trr);
       });
       if (!data.rows||!data.rows.length) tb.innerHTML='<tr><td colspan=10 style="text-align:center;padding:20px;color:var(--text-tertiary)">No permission details available.</td></tr>';
-    });
+    }).catch(function(err){Attest.showLoadError(backdrop.querySelector('.modal-body'),err.message||'Could not load permission details.',function(){backdrop.remove();openTxModal(roleName,btn);});});
   }
 
   // Action Details Modal
@@ -369,7 +368,7 @@
 
     state.submitting=true; submitWarning.textContent='';
     try {
-      const res = await fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approver:state.approver,rows:rows.filter(function(r){return r.roleName})})});
+      const res = await Attest.api.fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approver:state.approver,rows:rows.filter(function(r){return r.roleName})})});
       const result = await res.json().catch(function(){return{}});
       if (!res.ok) throw new Error(result.error||'Submission failed');
       const modal = completionModal; completionDetail.textContent='Submission ID: '+(result.submissionId||'N/A'); modal.classList.remove('hidden');
@@ -435,19 +434,6 @@
     if (warn) warn.textContent = ack === total ? 'All permissions acknowledged. Ready to submit.' : (total - ack) + ' of ' + total + ' roles need permission review.';
   }
 
-  // escHtml provided by shared.js as Attest.escHtml
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var sel = document.getElementById('tenantSelector');
-    if (sel && me.tenants && me.tenants.length > 1) {
-      sel.innerHTML = '';
-      me.tenants.forEach(function(t){
-        var o = document.createElement('option'); o.value = t.id;
-        o.textContent = t.name; if (t.id === me.tenantId) o.selected = true;
-        sel.appendChild(o);
-      });
-    }
-  }).catch(function(){});
-
   // ── Save Draft: persist current selections to localStorage ──
   function onSaveDraft() {
     var rows = document.querySelectorAll('#reviewTableBody tr');
@@ -461,14 +447,16 @@
         txAcknowledged: tr.dataset.txAcknowledged === 'true'
       });
     });
-    var key = 'attest_draft_' + (state.tenantId || 'default') + '_' + (state.approver || 'unknown');
+    if(!state.tenantId)return;
+    var key = 'attest_draft_' + state.tenantId + '_' + (state.approver || 'unknown');
     localStorage.setItem(key, JSON.stringify(draft));
     if (window.Attest && Attest.showToast) Attest.showToast('Draft saved — ' + draft.length + ' role(s) preserved.', 'success');
   }
 
   // ── Restore draft from localStorage on load ──
   function restoreDraft() {
-    var key = 'attest_draft_' + (state.tenantId || 'default') + '_' + (state.approver || 'unknown');
+    if(!state.tenantId)return;
+    var key = 'attest_draft_' + state.tenantId + '_' + (state.approver || 'unknown');
     var raw = localStorage.getItem(key);
     if (!raw) return;
     try {

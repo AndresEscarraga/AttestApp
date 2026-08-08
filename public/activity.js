@@ -19,9 +19,8 @@
   };
 
   async function verifyAdmin() {
-    const res = await fetch('/api/me');
-    const me = await res.json().catch(() => ({}));
-    if (!res.ok || !me.isAdmin) {
+    const me = await Attest.getCurrentUser();
+    if (!(me.capabilities || []).includes('activity:read')) {
       window.location.href = '/';
       return false;
     }
@@ -31,8 +30,7 @@
   async function loadActivity(reset) {
     try {
       if (reset) { offset = 0; events = []; hasMore = true; }
-      const res = await fetch('/api/activity?limit=' + pageSize + '&offset=' + offset);
-      if (!res.ok) throw new Error('Could not load activity log.');
+      const res = await Attest.api.fetch('/api/activity?limit=' + pageSize + '&offset=' + offset);
       const batch = await res.json();
       if (batch.length < pageSize) hasMore = false;
       events = events.concat(batch);
@@ -127,33 +125,6 @@
   refreshBtn.addEventListener('click', loadActivity);
   exportCsvBtn.addEventListener('click', exportCsv);
 
-  // Load sidebar user info
-  async function loadSidebarUser() {
-    try {
-      var res = await fetch('/api/me');
-      var me = await res.json().catch(function() { return {}; });
-      if (!res.ok) return;
-      var initials = (me.approverName || me.email || 'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-      var av = document.getElementById('sidebarAvatar'), nm = document.getElementById('sidebarName'), rl = document.getElementById('sidebarRole');
-      if (av) av.textContent = initials;
-      if (nm) nm.textContent = me.approverName || me.email || 'User';
-      if (rl) rl.textContent = me.isAdmin ? 'Administrator' : 'Approver';
-      if (me.tenants && me.tenants.length > 1) {
-        var sel = document.getElementById('tenantSelector');
-        if (sel) {
-          sel.innerHTML = '';
-          me.tenants.forEach(function(t) {
-            var o = document.createElement('option');
-            o.value = t.id; o.textContent = t.name;
-            if (t.id === me.tenantId) o.selected = true;
-            sel.appendChild(o);
-          });
-        }
-      }
-    } catch(e) {}
-  }
-  loadSidebarUser();
-
   async function boot() {
     const ok = await verifyAdmin();
     if (!ok) return;
@@ -162,5 +133,5 @@
     if (loadMore) loadMore.addEventListener('click', function() { loadActivity(false); });
   }
 
-  boot();
+  boot().catch(function(err){Attest.showLoadError(body.parentElement||document.body,err.message||'Could not load activity.',function(){boot();});});
 })();
