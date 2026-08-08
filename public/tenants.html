@@ -17,66 +17,8 @@
 <attest-sidebar active="tenants"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
+
 <attest-topbar breadcrumb="Attest › <span>Tenants</span>" search-placeholder="Search tenants…"></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Tenants</span> Search tenants…  -->
 
   <div class="content">
     <div class="content-header">
@@ -204,7 +146,7 @@
       var planBadge = t.plan === 'enterprise' ? 'badge-purple' : t.plan === 'professional' ? 'badge-info' : 'badge-neutral';
       html += '<tr>' +
         '<td><strong>' + escHtml(t.name) + '</strong>' + (t.id === 'default' ? ' <span class="badge badge-teal">Default</span>' : '') + '</td>' +
-        '<td style="font-family:monospace;font-size:11px">' + escHtml(t.id) + '</td>' +
+        '<td class="id-cell">' + escHtml(t.id) + '</td>' +
         '<td><span class="badge ' + planBadge + '">' + t.plan + '</span></td>' +
         '<td><span class="badge ' + statusBadge + '">' + t.status + '</span></td>' +
         '<td class="text-sm text-muted">' + fmtDate(t.created_at) + '</td>' +
@@ -236,15 +178,15 @@
         body: JSON.stringify({ status })
       });
       loadTenants();
-    } catch(e) { alert('Failed to update tenant.'); }
+    } catch(e) { Attest.showToast('Failed to update tenant.','error'); }
   }
 
   async function deleteTenant(id) {
-    if (!confirm('Delete this tenant? All associated data will be orphaned.')) return;
+    if (!await Attest.confirm('Delete this tenant? All associated data will be orphaned.','Delete')) return;
     try {
       await fetch('/api/tenants/' + id, { method: 'DELETE' });
       loadTenants();
-    } catch(e) { alert('Failed to delete tenant.'); }
+    } catch(e) { Attest.showToast('Failed to delete tenant.','error'); }
   }
 
   // Modal

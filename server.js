@@ -184,12 +184,13 @@ let rolesVersion = null;
 let txVersion = null;
 
 function parseRolesApprovers(buffer) {
-  uniqueRoleNames = [];
-  roleToApprover = {};
-  approverToRoles = {};
-  uniqueApprovers = [];
-  approverEmailToName = {};
-  approverNameToEmail = {};
+  // Clear in-place to preserve references held by route modules
+  uniqueRoleNames.length = 0;
+  for (var k in roleToApprover) delete roleToApprover[k];
+  for (var k in approverToRoles) delete approverToRoles[k];
+  uniqueApprovers.length = 0;
+  for (var k in approverEmailToName) delete approverEmailToName[k];
+  for (var k in approverNameToEmail) delete approverNameToEmail[k];
 
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = wb.SheetNames.includes('Complete') ? 'Complete' : wb.SheetNames[0];
@@ -241,7 +242,9 @@ function parseRolesApprovers(buffer) {
 }
 
 function parseTransactions(buffer) {
-  txByRole = {};
+  // Clear in-place to preserve references held by route modules
+  for (var k in txByRole) delete txByRole[k];
+  txHeader.length = 0;
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
@@ -249,7 +252,9 @@ function parseTransactions(buffer) {
   if (!data.length) return;
   const rawHeader = data[0].map(v => String(v));
   while (rawHeader.length && !String(rawHeader[rawHeader.length - 1]).trim()) rawHeader.pop();
-  txHeader = rawHeader.map(h => TX_HEADER_RENAMES[h] || h);
+  txHeader.length = 0;
+  var newHeader = rawHeader.map(h => TX_HEADER_RENAMES[h] || h);
+  for (var i = 0; i < newHeader.length; i++) txHeader.push(newHeader[i]);
   const colCount = rawHeader.length;
 
   for (let i = 1; i < data.length; i++) {

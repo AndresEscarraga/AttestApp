@@ -28,7 +28,7 @@
     document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
     localStorage.setItem('attest_theme',isDark?'light':'dark');
     var btns=document.querySelectorAll('.dark-toggle,.topbar-btn[id*="darkToggle"]');
-    for(var i=0;i<btns.length;i++)btns[i].textContent=isDark?'☀️':'🌙';
+    for(var i=0;i<btns.length;i++)btns[i].textContent=isDark?'🌙':'☀️';
     // Update theme label in user menu
     var tl=document.getElementById('menuThemeLabel');
     if(tl)tl.textContent=isDark?'Light':'Dark';
@@ -146,6 +146,9 @@
 
     // Init table sorting on sortable headers
     initTableSort();
+
+    // Init View Transitions for smooth page navigation
+    initViewTransitions();
 
     // Register service worker for offline caching
     if('serviceWorker' in navigator){
@@ -307,6 +310,51 @@
     }
   }
 
+  // ── View Transitions API — smooth crossfade between pages ──
+  function initViewTransitions() {
+    // Only if browser supports it (Chrome/Edge 111+, Safari 18+)
+    if (!document.startViewTransition) return;
+
+    // Intercept sidebar navigation
+    document.addEventListener('click', function(e) {
+      var link = e.target.closest('a.sidebar-item[href]');
+      if (!link) return;
+      // Skip if modifier key pressed (user wants new tab)
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+      // Skip if target is external or different origin
+      if (link.target === '_blank' || link.origin !== location.origin) return;
+      // Skip same-page anchors
+      if (link.href === location.href) return;
+
+      e.preventDefault();
+      var url = link.href;
+      document.startViewTransition(function() {
+        location.href = url;
+      });
+    });
+
+    // Intercept mobile tabbar navigation (buttons with onclick)
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.mobile-tab');
+      if (!btn) return;
+      var onclick = btn.getAttribute('onclick');
+      if (!onclick) return;
+      // Extract URL from onclick="location.href='...'"
+      var match = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+      if (!match) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      var url = match[1];
+      // Resolve relative URL
+      var a = document.createElement('a');
+      a.href = url;
+      document.startViewTransition(function() {
+        location.href = a.href;
+      });
+    }, true); // capture phase to beat the onclick handler
+  }
+
   // ── Global Search Handler ──
   var searchDebounce = null;
   function initSearch() {
@@ -452,4 +500,61 @@
   window.Attest.el=function(id){return document.getElementById(id);};
   window.Attest.showToast=showToast;
   window.Attest.fetchWithRetry=fetchWithRetry;
+
+  // ── Confirm Dialog (replaces native confirm) ──
+  var confirmModal=null,confirmResolve=null;
+  function getConfirmModal(){
+    if(confirmModal)return confirmModal;
+    var bd=document.createElement('div');bd.className='modal-backdrop hidden';bd.id='attestConfirmBackdrop';
+    bd.innerHTML='<div class="modal" style="width:400px"><div class="modal-header"><h3 id="confirmTitle">Confirm</h3><button class="modal-close" id="confirmClose">✕</button></div><div class="modal-body"><p id="confirmMessage" style="font-size:13px;line-height:1.5;color:var(--text-secondary)"></p></div><div class="modal-footer"><button class="btn btn-secondary" id="confirmCancel">Cancel</button><button class="btn btn-primary" id="confirmOk">Confirm</button></div></div>';
+    document.body.appendChild(bd);
+    confirmModal=bd;
+    bd.querySelector('#confirmClose').addEventListener('click',function(){resolveConfirm(false);});
+    bd.querySelector('#confirmCancel').addEventListener('click',function(){resolveConfirm(false);});
+    bd.querySelector('#confirmOk').addEventListener('click',function(){resolveConfirm(true);});
+    bd.addEventListener('click',function(e){if(e.target===bd)resolveConfirm(false);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!bd.classList.contains('hidden'))resolveConfirm(false);});
+    return confirmModal;
+  }
+  function resolveConfirm(result){
+    var m=getConfirmModal();
+    m.classList.add('closing');
+    setTimeout(function(){m.classList.add('hidden');m.classList.remove('closing');},180);
+    if(confirmResolve){confirmResolve(result);confirmResolve=null;}
+  }
+  window.Attest.confirm=function(message,title){
+    return new Promise(function(resolve){
+      var m=getConfirmModal();
+      m.querySelector('#confirmTitle').textContent=title||'Confirm';
+      m.querySelector('#confirmMessage').textContent=message;
+      m.querySelector('#confirmOk').textContent=title==='Delete'?'Delete':'Confirm';
+      m.querySelector('#confirmOk').className='btn '+(title==='Delete'?'btn-danger':'btn-primary');
+      m.classList.remove('hidden');
+      confirmResolve=resolve;
+    });
+  };
+  window.Attest.alert=function(message,title){
+    return new Promise(function(resolve){
+      var m=getConfirmModal();
+      m.querySelector('#confirmTitle').textContent=title||'Notice';
+      m.querySelector('#confirmMessage').textContent=message;
+      m.querySelector('#confirmCancel').classList.add('hidden');
+      m.querySelector('#confirmOk').textContent='OK';
+      m.querySelector('#confirmOk').className='btn btn-primary';
+      m.classList.remove('hidden');
+      confirmResolve=function(){m.querySelector('#confirmCancel').classList.remove('hidden');resolve();};
+    });
+  };
+
+  // ── Button Loading State ──
+  window.Attest.btnLoading=function(btn,loading,text){
+    if(loading){
+      btn._prevHTML=btn.innerHTML;btn._prevDisabled=btn.disabled;
+      btn.disabled=true;
+      btn.innerHTML='<span class="btn-spinner"></span> '+(text||'Loading…');
+    }else{
+      btn.disabled=btn._prevDisabled||false;
+      btn.innerHTML=btn._prevHTML||btn.textContent;
+    }
+  };
 })();

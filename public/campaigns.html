@@ -17,66 +17,8 @@
 <attest-sidebar active="campaigns"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
+
 <attest-topbar breadcrumb="Attest › <span>Campaigns</span>" search-placeholder="Search roles, approvers, campaigns..."></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Campaigns</span> Search roles, approvers, campaigns...  -->
 
   <div class="content">
     <div class="content-header flex-between">
@@ -85,7 +27,7 @@
     </div>
     <div class="card"><div class="card-body no-pad">
       <table class="data-table"><thead><tr><th class="sortable">Campaign</th><th class="sortable">Framework</th><th class="sortable">Period</th><th class="sortable">Approvers</th><th>Roles</th><th>Progress</th><th class="sortable">Status</th><th></th></tr></thead>
-        <tbody id="campaignsBody"><tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">Loading campaigns…</td></tr></tbody>
+        <tbody id="campaignsBody"><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody>
       </table>
     </div></div>
   </div>
@@ -114,12 +56,7 @@
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
+  // Sidebar user info handled by shared.js — no need to duplicate
 
   function loadCampaigns(){
     fetch('/api/campaigns').then(function(r){return r.json();}).then(function(data){
@@ -135,7 +72,7 @@
     if(!state.campaigns.length){tbody.innerHTML='<tr><td colspan="8" class="text-sm text-muted" style="text-align:center;padding:30px">No campaigns yet. Create your first campaign to get started.</td></tr>';return;}
     var html='';
     state.campaigns.forEach(function(c){
-      var fwBadge=c.framework==='SOX'?'badge-info':c.framework==='ISO27001'?'badge-purple':c.framework==='SOC2'?'badge-teal':c.framework==='GDPR'?'badge-warning':'badge-neutral';
+      var fwBadge='badge-fw-'+ (c.framework||'').toLowerCase();
       var stBadge=c.status==='active'?'badge-info':c.status==='completed'?'badge-success':c.status==='draft'?'badge-purple':'badge-neutral';
       var stLabel=c.status==='active'?'In Progress':c.status==='completed'?'Completed':c.status==='draft'?'Scheduled':c.status;
       var totalRoles=15;
@@ -143,8 +80,8 @@
       var progressPct=c.status==='completed'?100:(c.status==='draft'?0:15);
       html+='<tr><td><strong>'+esc(c.name)+'</strong></td>'+
         '<td><span class="badge '+fwBadge+'">'+esc(c.framework)+'</span></td>'+
-        '<td>'+esc(c.period)+'</td><td>'+(c.approvers||[]).length+'</td>'+
-        '<td>'+totalRoles+'</td>'+
+        '<td>'+esc(c.period)+'</td><td class="num">'+(c.approvers||[]).length+'</td>'+
+        '<td class="num">'+totalRoles+'</td>'+
         '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="progress-fill '+(c.status==='completed'?'fill-green':'fill-teal')+'" style="width:'+progressPct+'%"></div></div>'+(c.status==='completed'?'100%':c.status==='draft'?'—':progressPct+'%')+'</div></td>'+
         '<td><span class="badge '+stBadge+'">'+stLabel+'</span></td>'+
         '<td><div class="btn-group">'+
@@ -158,7 +95,7 @@
     tbody.querySelectorAll('.act-btn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();handleAction(b.dataset.action,b.dataset.id);});});
   }
   async function handleAction(action,id){
-    if(action==='delete'){if(!confirm('Delete this campaign?'))return;await fetch('/api/campaigns/'+id,{method:'DELETE'});loadCampaigns();return;}
+    if(action==='delete'){if(!await Attest.confirm('Delete this campaign?','Delete'))return;await fetch('/api/campaigns/'+id,{method:'DELETE'});loadCampaigns();return;}
     var ns={active:'active',completed:'completed',archived:'archived'}[action];if(!ns)return;
     await fetch('/api/campaigns/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:ns})});
     loadCampaigns();
@@ -166,18 +103,23 @@
   function openModal(){el('campaignModal').classList.remove('hidden');el('modalError').textContent='';el('campName').value='';el('campDeadline').value='';
     fetch('/api/approvers').then(function(r){return r.json();}).then(function(a){var s=el('approverSelect');s.innerHTML='';a.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});});
   }
-  function closeModal(){el('campaignModal').classList.add('hidden');}
+  function closeModal(){
+    var m=el('campaignModal');
+    m.classList.add('closing');
+    setTimeout(function(){m.classList.add('hidden');m.classList.remove('closing');},180);
+  }
   el('newCampaignBtn').addEventListener('click',openModal);
   el('modalClose').addEventListener('click',closeModal);el('modalCancel').addEventListener('click',closeModal);
   el('modalSave').addEventListener('click',function(){
     var name=el('campName').value.trim();if(!name){el('modalError').textContent='Campaign name is required.';return;}
+    var btn=el('modalSave');Attest.btnLoading(btn,true,'Creating…');
     var sel=el('approverSelect');var apps=[];for(var i=0;i<sel.options.length;i++){if(sel.options[i].selected)apps.push(sel.options[i].value);}
     fetch('/api/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,framework:el('campFramework').value,period:el('campPeriod').value,deadline:el('campDeadline').value,approvers:apps})})
     .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadCampaigns();})
-    .catch(function(e){el('modalError').textContent=e.message;});
+    .catch(function(e){el('modalError').textContent=e.message;})
+    .finally(function(){Attest.btnLoading(btn,false);});
   });
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  // Dark mode & sign out handled by shared.js — no need to duplicate
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
   loadCampaigns();
 })();

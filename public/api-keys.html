@@ -17,66 +17,8 @@
 <attest-sidebar active="api-keys"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
+
 <attest-topbar breadcrumb="Attest › <span>API Keys</span>" search-placeholder="Search keys…"></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>API Keys</span> Search keys…  -->
 
   <div class="content">
     <div class="content-header flex-between">
@@ -144,7 +86,7 @@
     tbody.innerHTML=html;
     tbody.querySelectorAll('.revoke-btn').forEach(function(b){b.addEventListener('click',function(){revokeKey(b.dataset.id);});});
   }
-  async function revokeKey(id){if(!confirm('Revoke this API key? It will stop working immediately.'))return;await fetch('/api/api-keys/'+id,{method:'DELETE'});loadKeys();}
+  async function revokeKey(id){if(!await Attest.confirm('Revoke this API key? It will stop working immediately.','Revoke Key'))return;await fetch('/api/api-keys/'+id,{method:'DELETE'});loadKeys();}
   function openModal(){el('keyModal').classList.remove('hidden');el('modalError').textContent='';el('keyName').value='';el('keyResult').classList.add('hidden');el('modalGenerate').style.display='';el('modalGenerate').textContent='Generate Key';}
   function closeModal(){el('keyModal').classList.add('hidden');}
   el('genKeyBtn').addEventListener('click',openModal);

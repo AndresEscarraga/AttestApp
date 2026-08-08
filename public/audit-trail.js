@@ -58,7 +58,7 @@
     ['filterRole','filterFrom','filterTo'].forEach(function(id) { el(id).addEventListener('input', render); el(id).addEventListener('change', render); });
     el('exportXlsxBtn').addEventListener('click', exportXlsx);
     el('exportCsvBtn').addEventListener('click', exportCsv);
-    el('exportPdfBtn').addEventListener('click', function() { exportPdf().catch(function() { alert('PDF export failed'); }); });
+    el('exportPdfBtn').addEventListener('click', function() { exportPdf().catch(function() { Attest.showToast('PDF export failed','error'); }); });
     var evBtn = el('evidenceExportBtn');
     if (evBtn) evBtn.addEventListener('click', function() { location.href = '/evidence.html'; });
     document.querySelectorAll('#logTable thead th[data-sort]').forEach(function(th) {
@@ -161,7 +161,7 @@
       tr.appendChild(tda);
       tr.appendChild(ritmCell(e));
       tr.appendChild(ritmStatusCell(e));
-      tr.appendChild(td(e.submissionId));
+      var sidCell = td(e.submissionId); sidCell.className = 'id-cell'; tr.appendChild(sidCell);
       tbody.appendChild(tr);
     });
     el('emptyMsg').hidden = data.length > 0;
@@ -210,7 +210,7 @@
   function ritmStatusCell(entry) {
     var c = document.createElement('td');
     var wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
-    var sel = document.createElement('select'); sel.style.cssText = 'padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px';
+    var sel = document.createElement('select'); sel.className = 'ritm-status'; sel.style.cssText = 'padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px';
     RITM_STATUSES.forEach(function(s) { sel.appendChild(new Option(s, s)); });
     sel.value = entry.ritmStatus || 'Open'; sel.disabled = !entry.ritm;
     var st = document.createElement('span'); st.className = 'save-status'; st.style.cssText = 'font-size:10px;margin-left:4px';

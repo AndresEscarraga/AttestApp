@@ -17,66 +17,8 @@
 <attest-sidebar active="sod"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
+
 <attest-topbar breadcrumb="Attest › <span>SoD Conflicts</span>" search-placeholder="Search..."></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>SoD Conflicts</span> Search...  -->
 
   <div class="content">
     <div class="content-header flex-between">
@@ -148,9 +90,9 @@
       var html='';
       state.conflicts.forEach(function(c){
         var sevBadge=c.severity==='critical'?'badge-danger':c.severity==='high'?'badge-warning':'badge-info';
-        var rowBg=c.severity==='critical'?'background:#FEF2F2':c.severity==='high'?'background:#FFFBEB':'';
+        var rowClass=c.severity==='critical'?'row-critical':c.severity==='high'?'row-warning':'';
         var rule=state.rules.find(function(r){return r.id===c.rule_id;});
-        html+='<tr style="'+rowBg+'"><td><span class="badge '+sevBadge+'">'+c.severity.charAt(0).toUpperCase()+c.severity.slice(1)+'</span></td>'+
+        html+='<tr class="'+rowClass+'"><td><span class="badge '+sevBadge+'">'+c.severity.charAt(0).toUpperCase()+c.severity.slice(1)+'</span></td>'+
           '<td><strong>'+esc(c.approver_name)+'</strong></td>'+
           '<td>Conflict: '+esc(c.role_a.split(' - ').pop())+' + '+esc(c.role_b.split(' - ').pop())+'</td>'+
           '<td class="text-sm">'+esc(c.role_a)+'</td><td class="text-sm">'+esc(c.role_b)+'</td>'+
@@ -171,7 +113,7 @@
     }
   }
   async function mitigateConflict(id){await fetch('/api/sod/conflicts/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'mitigated',mitigation_notes:'Mitigated by admin'})});loadData();}
-  el('detectBtn').addEventListener('click',function(){el('detectBtn').disabled=true;el('detectBtn').textContent='Detecting…';fetch('/api/sod/detect',{method:'POST'}).then(function(r){return r.json();}).then(function(d){alert(d.detected+' new conflict(s) found.');loadData();el('detectBtn').disabled=false;el('detectBtn').textContent='🔍 Run Detection';});});
+  el('detectBtn').addEventListener('click',function(){el('detectBtn').disabled=true;el('detectBtn').textContent='Detecting…';fetch('/api/sod/detect',{method:'POST'}).then(function(r){return r.json();}).then(function(d){Attest.showToast(d.detected+' new conflict(s) found.','success');loadData();el('detectBtn').disabled=false;el('detectBtn').textContent='🔍 Run Detection';});});
   function openRuleModal(){el('ruleModal').classList.remove('hidden');el('modalError').textContent='';el('ruleName').value='';el('ruleRoleA').value='';el('ruleRoleB').value='';
     fetch('/api/roles').then(function(r){return r.json();}).then(function(roles){var dl=el('rolesList');dl.innerHTML='';roles.forEach(function(r){var o=document.createElement('option');o.value=r;dl.appendChild(o);});});
   }

@@ -44,9 +44,9 @@ function processFile(filename) {
 
   let html = fs.readFileSync(filePath, 'utf8');
 
-  // 0. CLEANUP: Remove all previously injected build artifacts
-  html = html.replace(/<!-- Sidebar component[\s\S]*?Placeholders:[^>]* -->[\s]*/g, '');
-  html = html.replace(/<!-- Topbar component[\s\S]*?Placeholders:[^>]* -->[\s]*/g, '');
+  // 0. CLEANUP: Remove all previously injected build artifacts (including duplicates)
+  html = html.replace(/<!-- Sidebar component[\s\S]*?Placeholders:[\s\S]*?-->/g, '');
+  html = html.replace(/<!-- Topbar component[\s\S]*?Placeholders:[\s\S]*?-->/g, '');
   var mc = 0, mv = 0;
   html = html.replace(/<meta\s+charset="UTF-8"[^>]*>/gi, function(m){ mc++; return mc===1?m:''; });
   html = html.replace(/<meta\s+name="viewport"[^>]*>/gi, function(m){ mv++; return mv===1?m:''; });

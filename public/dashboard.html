@@ -18,79 +18,21 @@
 <attest-sidebar active="dashboard"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
+
 <attest-topbar breadcrumb="Attest › <span>Dashboard</span>" search-placeholder="Search roles, approvers, campaigns..."></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Dashboard</span> Search roles, approvers, campaigns...  -->
 
   <div class="content">
     <div class="content-header">
-      <h1 id="greeting">Good morning</h1>
+        <h1 id="greeting">Welcome</h1>
       <p id="dashboardSubtitle">Loading your access certification overview…</p>
     </div>
 
     <!-- KPI Stat Cards -->
     <div class="stats-grid" id="kpiGrid">
-      <div class="stat-card skeleton-card"><div class="stat-label">Total Roles</div><div class="stat-value skeleton-pulse">—</div></div>
-      <div class="stat-card skeleton-card"><div class="stat-label">Certification Progress</div><div class="stat-value skeleton-pulse">—</div></div>
-      <div class="stat-card skeleton-card"><div class="stat-label">Pending Reviews</div><div class="stat-value skeleton-pulse">—</div></div>
-      <div class="stat-card skeleton-card"><div class="stat-label">SoD Conflicts</div><div class="stat-value skeleton-pulse">—</div></div>
+      <div class="stat-card skeleton-card"><div class="stat-header"><span class="stat-label">Total Roles</span><span class="stat-icon icon-teal">⟳</span></div><div class="stat-value skeleton-pulse">—</div></div>
+      <div class="stat-card skeleton-card"><div class="stat-header"><span class="stat-label">Certification Progress</span><span class="stat-icon icon-green">✓</span></div><div class="stat-value skeleton-pulse">—</div></div>
+      <div class="stat-card skeleton-card"><div class="stat-header"><span class="stat-label">Pending Reviews</span><span class="stat-icon icon-amber">⟐</span></div><div class="stat-value skeleton-pulse">—</div></div>
+      <div class="stat-card skeleton-card"><div class="stat-header"><span class="stat-label">SoD Conflicts</span><span class="stat-icon icon-purple">⚠</span></div><div class="stat-value skeleton-pulse">—</div></div>
     </div>
 
     <!-- Chart + Activity row -->
@@ -322,51 +264,6 @@
       });
     } catch(e) { console.error('Chart error:', e); }
   }
-      if (!res.ok) throw new Error('API error');
-
-      if (!systems || !systems.length) {
-        svg.innerHTML = '<text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">No system data available. Upload role data to see progress.</text>';
-        return;
-      }
-
-      var colors = ['#0891B2','#059669','#D97706','#DC2626','#7C3AED','#2563EB','#EC4899','#F59E0B'];
-      var maxBars = Math.min(systems.length, 8);
-      var barW = Math.min(64, Math.floor(480 / maxBars));
-      var gap = Math.max(6, Math.floor((560 - maxBars * barW) / (maxBars + 1)));
-
-      var html = '';
-      // Grid lines
-      html += '<line x1="40" y1="150" x2="600" y2="150" stroke="var(--border)" stroke-width="1"/>';
-      html += '<line x1="40" y1="112" x2="600" y2="112" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      html += '<line x1="40" y1="75" x2="600" y2="75" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      html += '<line x1="40" y1="37" x2="600" y2="37" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>';
-      // Y-axis labels
-      html += '<text x="35" y="14" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">100%</text>';
-      html += '<text x="35" y="52" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">75%</text>';
-      html += '<text x="35" y="89" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">50%</text>';
-      html += '<text x="35" y="126" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">25%</text>';
-      html += '<text x="35" y="154" font-size="9" font-family="Inter" fill="var(--text-tertiary)" text-anchor="end">0%</text>';
-
-      for (var i = 0; i < maxBars; i++) {
-        var sys = systems[i];
-        var x = 45 + i * (barW + gap);
-        var barH = Math.max(4, (sys.pct / 100) * 150);
-        var y = 150 - barH;
-        var label = sys.name.length > 8 ? sys.name.substring(0,7) + '…' : sys.name;
-        var color = colors[i % colors.length];
-
-        html += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + color + '" opacity="0.85">' +
-          '<title>' + escHtml(sys.name) + ': ' + sys.reviewed + '/' + sys.total + ' (' + sys.pct + '%)</title>' +
-        '</rect>';
-        html += '<text x="' + (x + barW/2) + '" y="' + (y - 6) + '" font-size="10" font-family="Inter" fill="var(--text-primary)" font-weight="600" text-anchor="middle">' + escHtml(label) + '</text>';
-        html += '<text x="' + (x + barW/2) + '" y="166" font-size="10" font-family="Inter" fill="var(--text-tertiary)" text-anchor="middle">' + sys.pct + '%</text>';
-      }
-      svg.innerHTML = html;
-    } catch(e) {
-      svg.innerHTML = '<text x="300" y="90" text-anchor="middle" fill="var(--text-tertiary)" font-size="12" font-family="Inter">Chart unavailable</text>';
-      console.error('Chart error:', e);
-    }
-  }
 
   // ── Active campaigns ──
   async function loadCampaigns() {
@@ -426,7 +323,7 @@
       localStorage.setItem('attest_token', data.token);
       location.reload();
     } catch(e) {
-      alert('Failed to switch tenant: ' + e.message);
+      Attest.alert('Failed to switch tenant: ' + e.message, 'Error');
     }
   }
 

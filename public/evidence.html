@@ -17,66 +17,8 @@
 <attest-sidebar active="evidence"></attest-sidebar>
 
 <div class="main">
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
+
 <attest-topbar breadcrumb="Attest › <span>Evidence Locker</span>" search-placeholder="Search..."></attest-topbar>
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
-
-<!-- Topbar component — injected by build.js -->
-<!-- Placeholders: Attest › <span>Evidence Locker</span> Search...  -->
 
   <div class="content">
     <div class="content-header flex-between">
@@ -85,7 +27,7 @@
     </div>
     <div class="card"><div class="card-body no-pad">
           <table class="data-table"><thead><tr><th class="sortable">Package</th><th class="sortable">Campaign</th><th class="sortable">Generated</th><th>Format</th><th class="sortable">Size</th><th>Auditor Access</th><th></th></tr></thead>
-        <tbody id="evidenceBody"><tr><td colspan="7" class="text-sm text-muted" style="text-align:center;padding:30px">Loading packages…</td></tr></tbody>
+        <tbody id="evidenceBody"><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody>
       </table>
     </div></div>
   </div>
@@ -112,12 +54,7 @@
   function fmtDate(iso){try{return new Date(iso).toLocaleDateString();}catch(e){return iso;}}
   function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB';}
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(me){
-    var i=(me.approverName||me.email||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-    el('sidebarAvatar').textContent=i;el('sidebarName').textContent=me.approverName||me.email||'User';
-    el('sidebarRole').textContent=me.isAdmin?'Administrator':'Approver';
-    if(me.tenants&&me.tenants.length>1){var sel=el('tenantSelector');sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-  }).catch(function(){});
+  // Sidebar user info handled by shared.js — no need to duplicate
 
   function loadPackages(){
     fetch('/api/evidence').then(function(r){return r.json();}).then(function(data){state.packages=data;render();});
@@ -130,7 +67,7 @@
     state.packages.forEach(function(p){
       html+='<tr><td>📄 <strong>'+esc(p.name)+'.zip</strong></td>'+
         '<td>'+(p.campaign_id||'All')+'</td><td>'+fmtDate(p.generated_at)+'</td>'+
-        '<td>ZIP (CSV + TXT)</td><td>'+fmtSize(p.file_size)+'</td>'+
+        '<td>ZIP (CSV + TXT)</td><td class="num">'+fmtSize(p.file_size)+'</td>'+
         '<td>'+(p.share_token?'<span class="badge badge-success">Shared</span>':'<span class="badge badge-neutral">Internal only</span>')+'</td>'+
         '<td><div class="btn-group">'+
           '<a class="btn btn-ghost btn-sm" href="/api/evidence/'+p.id+'/download">Download</a>'+
@@ -140,25 +77,28 @@
     });
     tbody.innerHTML=html;
     tbody.querySelectorAll('.share-btn').forEach(function(b){b.addEventListener('click',function(){sharePackage(b.dataset.id);});});
-    tbody.querySelectorAll('.del-btn').forEach(function(b){b.addEventListener('click',function(){if(!confirm('Delete package?'))return;fetch('/api/evidence/'+b.dataset.id,{method:'DELETE'}).then(loadPackages);});});
+    tbody.querySelectorAll('.del-btn').forEach(function(b){b.addEventListener('click',async function(){if(!await Attest.confirm('Delete this evidence package?','Delete'))return;fetch('/api/evidence/'+b.dataset.id,{method:'DELETE'}).then(loadPackages);});});
   }
   async function sharePackage(id){
     var r=await fetch('/api/evidence/'+id+'/share',{method:'POST'});var d=await r.json();
-    alert('Share link (valid 7 days):\n'+window.location.origin+d.shareUrl);
+    Attest.alert('Share link (valid 7 days):\n'+window.location.origin+d.shareUrl,'Link Generated');
   }
   function openModal(){el('generateModal').classList.remove('hidden');el('modalError').textContent='';el('pkgName').value='Evidence_Package_'+new Date().toISOString().slice(0,10);}
-  function closeModal(){el('generateModal').classList.add('hidden');}
+  function closeModal(){
+    var m=el('generateModal');
+    m.classList.add('closing');
+    setTimeout(function(){m.classList.add('hidden');m.classList.remove('closing');},180);
+  }
   el('generateBtn').addEventListener('click',openModal);
   el('modalClose').addEventListener('click',closeModal);el('modalCancel').addEventListener('click',closeModal);
   el('modalGenerate').addEventListener('click',function(){
-    var btn=el('modalGenerate');btn.disabled=true;btn.textContent='Generating...';
+    var btn=el('modalGenerate');Attest.btnLoading(btn,true,'Generating…');
     fetch('/api/evidence/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:el('pkgName').value||'Package',campaignId:el('pkgCampaign').value,description:el('pkgDescription').value})})
     .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Failed');});closeModal();loadPackages();})
     .catch(function(e){el('modalError').textContent=e.message;})
-    .finally(function(){btn.disabled=false;btn.textContent='Generate Package';});
+    .finally(function(){Attest.btnLoading(btn,false);});
   });
-  var dt=el('darkToggle');if(dt){var s=localStorage.getItem('attest_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');dt.textContent='☀️';}dt.addEventListener('click',function(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');dt.textContent=d?'🌙':'☀️';localStorage.setItem('attest_theme',d?'light':'dark');});}
-  var sb=el('signOutBtn');if(sb)sb.addEventListener('click',function(){localStorage.removeItem('attest_token');localStorage.removeItem('attest_user');location.href='/login.html';});
+  // Dark mode & sign out handled by shared.js — no need to duplicate
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
   loadPackages();
 })();
