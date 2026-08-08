@@ -123,9 +123,6 @@
           if (t.id === me.tenantId) opt.selected = true;
           sel.appendChild(opt);
         });
-        sel.addEventListener('change', function() {
-          switchTenant(sel.value);
-        });
       }
 
       return me;
@@ -308,23 +305,6 @@
     newCampaignBtn.addEventListener('click', function() {
       location.href = '/campaigns.html';
     });
-  }
-
-  // ── Tenant switching ──
-  async function switchTenant(tenantId) {
-    try {
-      var res = await fetch('/api/auth/switch-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId })
-      });
-      var data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      localStorage.setItem('attest_token', data.token);
-      location.reload();
-    } catch(e) {
-      Attest.alert('Failed to switch tenant: ' + e.message, 'Error');
-    }
   }
 
   // Theme handled by shared.js — no need to duplicate here

@@ -26,16 +26,19 @@ class LocalDataStore {
     }
     return safeName;
   }
-  _path(name) {
-    return resolveInside(this.dir, this._safeName(name));
+  _path(name, tenantId = 'default') {
+    const tid = String(tenantId || 'default').trim();
+    if (!/^[a-zA-Z0-9_-]+$/.test(tid)) throw new Error('Invalid tenant id for source path');
+    const tenantDir = tid === 'default' ? this.dir : resolveInside(this.dir, tid);
+    return resolveInside(tenantDir, this._safeName(name));
   }
-  async getVersion(name) {
-    const p = this._path(name);
+  async getVersion(name, tenantId) {
+    const p = this._path(name, tenantId);
     if (!pathExists(p)) return null;
     return String(fileMtimeMs(p));
   }
-  async getFile(name) {
-    const p = this._path(name);
+  async getFile(name, tenantId) {
+    const p = this._path(name, tenantId);
     if (!pathExists(p)) throw new Error(`Source file not found: ${p}`);
     return {
       buffer: readBuffer(p),
@@ -46,7 +49,7 @@ class LocalDataStore {
 }
 
 function createDataStore() {
-  const dir = process.env.REPORTS_DIR || path.join(__dirname, '..', 'data', 'sources');
+  const dir = process.env.REPORTS_DIR || path.join(__dirname, '..', 'Reports');
   const allowedNames = [
     process.env.ROLES_FILE_NAME || 'Roles Approvers.xlsx',
     process.env.TX_FILE_NAME || 'Transactions.xlsx',

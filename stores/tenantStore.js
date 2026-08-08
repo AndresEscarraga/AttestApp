@@ -39,6 +39,21 @@ class TenantStore {
     return rows.map(r => this._row(r));
   }
 
+  async listForUser(email) {
+    const rows = this.db.prepare(`
+      SELECT t.*, m.role, m.approver_name, m.status AS membership_status
+      FROM tenants t
+      JOIN tenant_memberships m ON m.tenant_id = t.id
+      WHERE m.email = ? AND m.status = 'active' AND t.status = 'active'
+      ORDER BY t.name
+    `).all(String(email || '').trim().toLowerCase());
+    return rows.map(row => ({
+      ...this._row(row),
+      role: row.role,
+      approverName: row.approver_name || '',
+    }));
+  }
+
   async update(id, updates) {
     const existing = await this.getById(id);
     if (!existing) return null;

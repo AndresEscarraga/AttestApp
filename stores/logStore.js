@@ -53,6 +53,7 @@ class SqliteLogStore {
     if (filters.approver) { sql += ' AND approver = @approver'; params.approver = filters.approver; }
     if (filters.action)   { sql += ' AND action = @action';     params.action = filters.action; }
     if (filters.role)     { sql += ' AND role_name = @role';    params.role = filters.role; }
+    if (filters.campaignId) { sql += ' AND campaign_id = @campaignId'; params.campaignId = filters.campaignId; }
     sql += ' ORDER BY timestamp DESC';
     // Pagination: default to 500 max to prevent OOM on large datasets
     var limit = filters.limit > 0 ? Math.min(filters.limit, 1000) : 500;
@@ -75,22 +76,29 @@ class SqliteLogStore {
       rejectionReason: r.rejection_reason,
       rowIndex: r.row_index,
       campaignId: r.campaign_id || '',
+      tenantId: r.tenant_id,
     }));
   }
 
-  async updateRitm(logEntryId, ritm) {
+  async updateRitm(logEntryId, tenantId, ritm) {
     const result = this.db.prepare(
-      'UPDATE submissions SET ritm = ? WHERE log_entry_id = ?'
-    ).run(ritm, logEntryId);
+      'UPDATE submissions SET ritm = ? WHERE log_entry_id = ? AND tenant_id = ?'
+    ).run(ritm, logEntryId, requireTenantId(tenantId));
     return result.changes > 0;
   }
 
-  async updateRitmStatus(logEntryId, ritmStatus) {
+  async updateRitmStatus(logEntryId, tenantId, ritmStatus) {
     const result = this.db.prepare(
-      'UPDATE submissions SET ritm_status = ? WHERE log_entry_id = ?'
-    ).run(ritmStatus, logEntryId);
+      'UPDATE submissions SET ritm_status = ? WHERE log_entry_id = ? AND tenant_id = ?'
+    ).run(ritmStatus, logEntryId, requireTenantId(tenantId));
     return result.changes > 0;
   }
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
 function createLogStore() {

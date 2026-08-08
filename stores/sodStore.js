@@ -19,9 +19,10 @@ class SodStore {
   // ────────── RULES ──────────
 
   async createRule(rule) {
+    const tenantId = requireTenantId(rule && rule.tenant_id);
     const r = {
       id: rule.id || newId('rule_'),
-      tenant_id: rule.tenant_id || 'default',
+      tenant_id: tenantId,
       name: String(rule.name || '').trim(),
       role_a: String(rule.role_a || '').trim(),
       role_b: String(rule.role_b || '').trim(),
@@ -50,8 +51,8 @@ class SodStore {
   }
 
   async listRules(filters = {}) {
-    let sql = 'SELECT * FROM sod_rules WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM sod_rules WHERE tenant_id = ?';
+    const params = [requireTenantId(filters.tenant_id)];
     if (filters.severity) { sql += ' AND severity = ?'; params.push(filters.severity); }
     if (filters.framework) { sql += ' AND framework = ?'; params.push(filters.framework); }
     sql += ' ORDER BY created_at DESC';
@@ -59,24 +60,27 @@ class SodStore {
     return rows.map(r => this._ruleRow(r));
   }
 
-  async getRule(id) {
-    const row = this.db.prepare('SELECT * FROM sod_rules WHERE id = ?').get(id);
+  async getRule(id, tenantId) {
+    const row = this.db.prepare('SELECT * FROM sod_rules WHERE id = ? AND tenant_id = ?')
+      .get(id, requireTenantId(tenantId));
     return row ? this._ruleRow(row) : null;
   }
 
-  async deleteRule(id) {
+  async deleteRule(id, tenantId) {
+    const tid = requireTenantId(tenantId);
     // Delete associated conflicts too
-    this.db.prepare('DELETE FROM sod_conflicts WHERE rule_id = ?').run(id);
-    const result = this.db.prepare('DELETE FROM sod_rules WHERE id = ?').run(id);
+    this.db.prepare('DELETE FROM sod_conflicts WHERE rule_id = ? AND tenant_id = ?').run(id, tid);
+    const result = this.db.prepare('DELETE FROM sod_rules WHERE id = ? AND tenant_id = ?').run(id, tid);
     return result.changes > 0;
   }
 
   // ────────── CONFLICTS ──────────
 
-  async detectConflicts(approverName, approverRoles) {
+  async detectConflicts(tenantId, approverName, approverRoles) {
+    const tid = requireTenantId(tenantId);
     if (!approverRoles || approverRoles.length < 2) return [];
 
-    const rules = await this.listRules();
+    const rules = await this.listRules({ tenant_id: tid });
     const conflicts = [];
 
     for (const rule of rules) {
@@ -86,8 +90,8 @@ class SodStore {
 
       // Check if this conflict already exists for this approver
       const existing = this.db.prepare(
-        "SELECT id FROM sod_conflicts WHERE rule_id = ? AND approver_name = ? AND status = 'open'"
-      ).get(rule.id, approverName);
+        "SELECT id FROM sod_conflicts WHERE tenant_id = ? AND rule_id = ? AND approver_name = ? AND status = 'open'"
+      ).get(tid, rule.id, approverName);
 
       if (existing) continue; // Already recorded
 
@@ -121,8 +125,8 @@ class SodStore {
   }
 
   async listConflicts(filters = {}) {
-    let sql = 'SELECT * FROM sod_conflicts WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM sod_conflicts WHERE tenant_id = ?';
+    const params = [requireTenantId(filters.tenant_id)];
     if (filters.status) { sql += ' AND status = ?'; params.push(filters.status); }
     if (filters.severity) { sql += ' AND severity = ?'; params.push(filters.severity); }
     if (filters.approver_name) { sql += ' AND approver_name = ?'; params.push(filters.approver_name); }
@@ -131,13 +135,15 @@ class SodStore {
     return rows.map(r => this._conflictRow(r));
   }
 
-  async getConflict(id) {
-    const row = this.db.prepare('SELECT * FROM sod_conflicts WHERE id = ?').get(id);
+  async getConflict(id, tenantId) {
+    const row = this.db.prepare('SELECT * FROM sod_conflicts WHERE id = ? AND tenant_id = ?')
+      .get(id, requireTenantId(tenantId));
     return row ? this._conflictRow(row) : null;
   }
 
-  async updateConflict(id, updates) {
-    const existing = await this.getConflict(id);
+  async updateConflict(id, tenantId, updates) {
+    const tid = requireTenantId(tenantId);
+    const existing = await this.getConflict(id, tid);
     if (!existing) return null;
 
     const merged = { ...existing, ...updates };
@@ -146,16 +152,17 @@ class SodStore {
     this.db.prepare(`
       UPDATE sod_conflicts
       SET status = ?, mitigated_by = ?, mitigated_at = ?, mitigation_notes = ?
-      WHERE id = ?
-    `).run(merged.status, merged.mitigated_by || '', merged.mitigated_at, merged.mitigation_notes || '', id);
+      WHERE id = ? AND tenant_id = ?
+    `).run(merged.status, merged.mitigated_by || '', merged.mitigated_at, merged.mitigation_notes || '', id, tid);
 
     return merged;
   }
 
-  async getConflictStats() {
-    const total = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts").get();
-    const open = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts WHERE status = 'open'").get();
-    const critical = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts WHERE severity = 'critical' AND status = 'open'").get();
+  async getConflictStats(tenantId) {
+    const tid = requireTenantId(tenantId);
+    const total = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts WHERE tenant_id = ?").get(tid);
+    const open = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts WHERE tenant_id = ? AND status = 'open'").get(tid);
+    const critical = this.db.prepare("SELECT COUNT(*) as cnt FROM sod_conflicts WHERE tenant_id = ? AND severity = 'critical' AND status = 'open'").get(tid);
     return {
       total: total ? total.cnt : 0,
       open: open ? open.cnt : 0,
@@ -197,6 +204,12 @@ class SodStore {
       mitigation_notes: r.mitigation_notes,
     };
   }
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
 function createSodStore() {

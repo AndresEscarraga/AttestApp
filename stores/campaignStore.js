@@ -46,6 +46,7 @@ class SqliteCampaignStore {
 
   // ── Create ──
   async create(campaign) {
+    if (!campaign || !String(campaign.tenant_id || '').trim()) throw new Error('tenant_id is required');
     const c = normalizeCampaign(campaign);
     c.id = c.id || newCampaignId();
     c.created_at = new Date().toISOString();
@@ -65,8 +66,9 @@ class SqliteCampaignStore {
 
   // ── Read all ──
   async readAll(filters = {}) {
-    let sql = 'SELECT * FROM campaigns WHERE 1=1';
-    const params = [];
+    const tenantId = requireTenantId(filters.tenant_id);
+    let sql = 'SELECT * FROM campaigns WHERE tenant_id = ?';
+    const params = [tenantId];
 
     if (filters.status) {
       sql += ' AND status = ?';
@@ -76,11 +78,6 @@ class SqliteCampaignStore {
       sql += ' AND framework = ?';
       params.push(filters.framework);
     }
-    if (filters.tenant_id) {
-      sql += ' AND tenant_id = ?';
-      params.push(filters.tenant_id);
-    }
-
     sql += ' ORDER BY created_at DESC';
 
     if (filters.limit > 0) {
@@ -93,14 +90,16 @@ class SqliteCampaignStore {
   }
 
   // ── Read by ID ──
-  async readById(id) {
-    const row = this.db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id);
+  async readById(id, tenantId) {
+    const row = this.db.prepare('SELECT * FROM campaigns WHERE id = ? AND tenant_id = ?')
+      .get(id, requireTenantId(tenantId));
     return row ? this._rowToCampaign(row) : null;
   }
 
   // ── Update ──
-  async update(id, updates) {
-    const existing = await this.readById(id);
+  async update(id, tenantId, updates) {
+    const tid = requireTenantId(tenantId);
+    const existing = await this.readById(id, tid);
     if (!existing) return null;
 
     const merged = { ...existing, ...updates, id, updated_at: new Date().toISOString() };
@@ -110,24 +109,26 @@ class SqliteCampaignStore {
       UPDATE campaigns
       SET name = ?, description = ?, framework = ?, period = ?, status = ?,
           deadline = ?, approvers = ?, updated_at = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `).run(
       c.name, c.description, c.framework, c.period, c.status,
-      c.deadline, serializeApprovers(c.approvers), c.updated_at, c.id
+      c.deadline, serializeApprovers(c.approvers), c.updated_at, c.id, tid
     );
 
     return c;
   }
 
   // ── Delete ──
-  async delete(id) {
-    const result = this.db.prepare('DELETE FROM campaigns WHERE id = ?').run(id);
+  async delete(id, tenantId) {
+    const result = this.db.prepare('DELETE FROM campaigns WHERE id = ? AND tenant_id = ?')
+      .run(id, requireTenantId(tenantId));
     return result.changes > 0;
   }
 
   // ── Get progress stats for a campaign ──
-  async getProgress(campaignId) {
-    const campaign = await this.readById(campaignId);
+  async getProgress(campaignId, tenantId) {
+    const tid = requireTenantId(tenantId);
+    const campaign = await this.readById(campaignId, tid);
     if (!campaign) return null;
 
     const approvers = campaign.approvers;
@@ -135,8 +136,8 @@ class SqliteCampaignStore {
 
     for (const approver of approvers) {
       const submissions = this.db.prepare(
-        "SELECT DISTINCT role_name FROM submissions WHERE approver = ? AND campaign_id = ? AND action != ''"
-      ).all(approver, campaignId);
+        "SELECT DISTINCT role_name FROM submissions WHERE tenant_id = ? AND approver = ? AND campaign_id = ? AND action != ''"
+      ).all(tid, approver, campaignId);
 
       // Get roles assigned to this approver from the in-memory data
       const reviewedRoles = submissions.map(s => s.role_name);
@@ -150,8 +151,8 @@ class SqliteCampaignStore {
 
     // Count total unique roles reviewed across all approvers
     const totalReviewed = this.db.prepare(
-      "SELECT COUNT(DISTINCT role_name) as cnt FROM submissions WHERE campaign_id = ? AND action != ''"
-    ).get(campaignId);
+      "SELECT COUNT(DISTINCT role_name) as cnt FROM submissions WHERE tenant_id = ? AND campaign_id = ? AND action != ''"
+    ).get(tid, campaignId);
 
     return {
       campaignId,
@@ -177,6 +178,12 @@ class SqliteCampaignStore {
       updated_at: row.updated_at,
     };
   }
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
 function createCampaignStore() {

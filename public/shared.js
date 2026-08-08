@@ -12,10 +12,17 @@
 
   // ── Auth header inject (runs before page JS, so all fetch() calls get the token) ──
   var origFetch=window.fetch;
-  window.fetch=function(url,opts){
-    opts=opts||{};opts.headers=opts.headers||{};
-    if(token&&!opts.headers['Authorization'])opts.headers['Authorization']='Bearer '+token;
-    return origFetch(url,opts);
+  window.fetch=function(input,opts){
+    opts=opts||{};
+    var url=typeof input==='string'?new URL(input,location.href):new URL(input.url,location.href);
+    if(url.origin===location.origin){
+      var baseHeaders=opts.headers||(typeof Request!=='undefined'&&input instanceof Request?input.headers:undefined);
+      var headers=new Headers(baseHeaders||{});
+      token=localStorage.getItem('attest_token');
+      if(token&&!headers.has('Authorization'))headers.set('Authorization','Bearer '+token);
+      opts.headers=headers;
+    }
+    return origFetch(input,opts);
   };
 
   // ── Dark mode from saved preference ──
@@ -102,11 +109,7 @@
         themeLabel.textContent=curTheme==='dark'?'Dark':'Light';
       }
 
-      // Tenant selector
-      if(me.tenants&&me.tenants.length>1){
-        var sel=document.getElementById('tenantSelector');
-        if(sel){sel.innerHTML='';me.tenants.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;if(t.id===me.tenantId)o.selected=true;sel.appendChild(o);});}
-      }
+      populateTenantSelector(me);
 
       // Role-based sidebar visibility
       applyRoleVisibility(me.role || (me.isAdmin ? 'admin' : 'approver'));
@@ -120,7 +123,56 @@
       window.__attestUser=me;
       // Fire event so page scripts know user is loaded
       document.dispatchEvent(new CustomEvent('attest:userLoaded',{detail:me}));
-    }).catch(function(){});
+    }).catch(function(err){
+      console.error('Could not load current tenant context:',err);
+    });
+  }
+
+  function populateTenantSelector(me){
+    var sel=document.getElementById('tenantSelector');
+    if(!sel)return;
+    sel.innerHTML='';
+    (me.tenants||[]).forEach(function(t){
+      var o=document.createElement('option');
+      o.value=t.id;
+      o.textContent=t.name;
+      if(t.id===me.tenantId)o.selected=true;
+      sel.appendChild(o);
+    });
+    if(!(me.tenants||[]).length){
+      var fallback=document.createElement('option');
+      fallback.value=me.tenantId||'';
+      fallback.textContent=(me.tenant&&me.tenant.name)||'Current organization';
+      sel.appendChild(fallback);
+    }
+    sel.value=me.tenantId||sel.value;
+    sel.disabled=(me.tenants||[]).length<2;
+    if(sel.dataset.attestTenantWired==='1')return;
+    sel.dataset.attestTenantWired='1';
+    sel.addEventListener('change',function(){
+      switchTenant(sel.value,me.tenantId,sel);
+    });
+  }
+
+  async function switchTenant(tenantId,previousTenantId,selector){
+    if(!tenantId||tenantId===previousTenantId)return;
+    if(selector)selector.disabled=true;
+    document.dispatchEvent(new CustomEvent('attest:tenantChanging',{detail:{from:previousTenantId,to:tenantId}}));
+    try{
+      var response=await fetch('/api/auth/switch-tenant',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tenant_id:tenantId})
+      });
+      var data=await response.json().catch(function(){return{};});
+      if(!response.ok||!data.token)throw new Error(data.error||'Failed to switch organization.');
+      localStorage.setItem('attest_token',data.token);
+      token=data.token;
+      location.reload();
+    }catch(err){
+      if(selector){selector.value=previousTenantId;selector.disabled=false;}
+      showToast(err.message||'Failed to switch organization.','error');
+    }
   }
 
   document.addEventListener('DOMContentLoaded',function(){

@@ -135,7 +135,9 @@ scripts/build.js
 | `detail` | TEXT | NOT NULL DEFAULT '' | Extended event metadata |
 | `tenant_id` | TEXT | NOT NULL DEFAULT 'default' | Multi-tenant partition key (migration 004c) |
 
-### 2.3 `admin_users` — Administrative Access Control
+### 2.3 `admin_users` — Legacy Compatibility Table
+
+This table is retained only for migration compatibility. Runtime authentication and authorization use `user_accounts` plus `tenant_memberships`; new code MUST NOT use `admin_users` as the source of truth.
 
 | Column | Type | Constraints | Purpose |
 |--------|------|-------------|---------|
@@ -145,6 +147,35 @@ scripts/build.js
 | `password_hash` | TEXT | DEFAULT '' | bcrypt hash (migration 004e) |
 | `role` | TEXT | DEFAULT 'admin' | RBAC role: admin / approver / auditor (migration 004f) |
 | `tenant_id` | TEXT | NOT NULL DEFAULT 'default' | Multi-tenant partition key (migration 004d) |
+
+### 2.3a `user_accounts` — Authentication Identity
+
+| Column | Type | Constraints | Purpose |
+|--------|------|-------------|---------|
+| `email` | TEXT | PRIMARY KEY | Global normalized login identity |
+| `password_hash` | TEXT | NOT NULL DEFAULT '' | bcrypt password hash for the current local provider |
+| `display_name` | TEXT | NOT NULL DEFAULT '' | Optional display name |
+| `created_at` | TEXT | NOT NULL | Account creation timestamp |
+| `updated_at` | TEXT | NOT NULL | Last account update |
+
+### 2.3b `tenant_memberships` — Tenant Authorization Context
+
+| Column | Type | Constraints | Purpose |
+|--------|------|-------------|---------|
+| `email` | TEXT | COMPOSITE PK | Account email |
+| `tenant_id` | TEXT | COMPOSITE PK, INDEXED | Authorized tenant |
+| `role` | TEXT | NOT NULL | Tenant-specific role: admin / approver / auditor |
+| `approver_name` | TEXT | NOT NULL DEFAULT '' | Approver profile within this tenant |
+| `status` | TEXT | NOT NULL DEFAULT 'active' | Membership lifecycle |
+| `protected` | INTEGER | NOT NULL DEFAULT 0 | Membership cannot be deleted through normal UI |
+| `created_at` | TEXT | NOT NULL | Membership creation timestamp |
+| `updated_at` | TEXT | NOT NULL | Last membership update |
+
+The same email may have different roles and approver profiles in different tenants.
+
+### 2.3c Tenant Role Catalog
+
+`tenant_role_assignments` partitions business roles, approvers, approver emails and source systems by `(tenant_id, role_name)`. `tenant_role_transactions` partitions permission rows by `(tenant_id, role_name, row_index)`. Review, campaign, dashboard and SoD routes read these tables instead of global in-memory role maps.
 
 ### 2.4 `campaigns` — Access Certification Campaigns
 
@@ -481,18 +512,21 @@ Payload: {
 ```
 Request
   │
-  ├─ X-Tenant-ID header? ──► Use header value
-  ├─ JWT tenant_id claim? ─► Use claim value
-  └─ Default: 'default'
+  ├─ Authenticate JWT or API key
+  ├─ Read tenant_id from the verified credential
+  ├─ Validate active (email, tenant_id) membership for users
+  └─ Build immutable Principal/TenantContext
       │
       ▼
-  req.tenantId attached to all store operations
+  req.tenantId attached to all service/store operations
       │
       ▼
-  All SQL queries include WHERE tenant_id = ? clause
+  IDs and queries are scoped by (tenant_id, id)
 ```
 
-Tenant-scoped tables: `submissions`, `activity`, `admin_users`, `campaigns`, `sod_rules`, `sod_conflicts`, `evidence_packages`, `tenants`, `api_keys`, `notifications`. The `tenants` table itself is NOT tenant-scoped (global registry).
+`X-Tenant-ID` is never an authorization source for browser/user traffic. Tenant switching calls `/api/auth/switch-tenant`; the server verifies membership and issues a new JWT. A client-supplied header cannot override the authenticated context.
+
+Tenant-scoped tables: `tenant_memberships`, `tenant_role_assignments`, `tenant_role_transactions`, `submissions`, `activity`, `campaigns`, `sod_rules`, `sod_conflicts`, `evidence_packages`, `api_keys`, and `notifications`. The `tenants` and `user_accounts` registries are global but are never returned without membership filtering.
 
 ### 5.3 Audit Logging
 
@@ -514,24 +548,24 @@ Every page access, API call, submission, RITM update, campaign status change, ev
 
 | Role | Rank | Permissions |
 |------|------|-------------|
-| `admin` | 3 | Full access: all pages, all API endpoints, impersonation, tenant management, user management, data upload |
+| `admin` | 3 | Administrative access inside the active tenant; no implicit access to other tenants |
 | `approver` | 2 | Review own roles, view campaigns, view SoD conflicts, view evidence |
 | `auditor` | 1 | Read-only: dashboard, audit trail, evidence locker (no modifications) |
 
-Role-based UI visibility is enforced client-side via `data-min-role` attributes on sidebar sections. Server-side authorization is enforced via Express middleware that checks `req.auth.isAdmin` and `req.auth.roles`.
+Role-based UI visibility is enforced client-side via `data-min-role` attributes on sidebar sections. It is only presentation logic. Server-side authorization derives `req.auth.role` and `req.auth.isAdmin` from the active membership and remains authoritative for every mutation.
 
 ### 5.5 Protected Admin Accounts
 
-The following emails are flagged as `protected = 1` in `admin_users` and cannot be deleted via the UI:
+The following synthetic memberships are flagged as `protected = 1` and cannot be deleted via the UI:
 
 ```
-admin.one@attest.local
-approver.one@attest.local
+superadmin.one@attest.local
+superadmin.two@attest.local
 ```
 
-### 5.6 In-Memory Data Loading Contract
+### 5.6 Source Import Compatibility Contract
 
-**Critical Rule:** All in-memory data structures (`uniqueRoleNames`, `roleToApprover`, `approverToRoles`, `uniqueApprovers`, `approverEmailToName`, `approverNameToEmail`, `txHeader`, `txByRole`) MUST be mutated in-place, never reassigned. These arrays/objects are passed by reference to route modules at registration time. Reassignment (`= []` or `= {}`) creates a new reference; route modules retain the old (empty) reference, causing data visibility loss.
+The Excel parser still builds in-memory arrays while importing a workbook, and those collections are mutated in place for compatibility. They are no longer an authorization or route-data contract. After parsing, the importer replaces only the active tenant's rows in `tenant_role_assignments` and `tenant_role_transactions`; runtime routes read the tenant-scoped catalog.
 
 **Approved clearing pattern:**
 ```javascript
@@ -544,9 +578,9 @@ for (var k in roleToApprover) delete roleToApprover[k];
 Object.assign(roleToApprover, newData);
 ```
 
-**Prohibited pattern:**
+**Prohibited compatibility pattern:**
 ```javascript
-// NEVER reassign — breaks route module references
+// Do not reassign during parsing — compatibility consumers retain the old reference
 uniqueRoleNames = [];
 roleToApprover = {};
 ```

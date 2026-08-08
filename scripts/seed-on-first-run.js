@@ -147,11 +147,198 @@ function generateExcelFiles() {
   console.log(`[seed] Generated: ${txPath} (${txRows.length - 1} transaction rows)`);
 }
 
+function ensureIdentitySeed(db) {
+  const bcrypt = require('bcrypt');
+  const demoPassword = bcrypt.hashSync('password123', 10);
+  const now = new Date().toISOString();
+  const tenants = [
+    { id: 'default', name: 'Default Organization', plan: 'starter', settings: '{}' },
+    { id: 'tenant-beta', name: 'Beta Manufacturing', plan: 'professional', settings: '{"accent":"beta","email_notifications":true}' },
+  ];
+  const insertTenant = db.prepare(`
+    INSERT OR IGNORE INTO tenants (id, name, plan, status, settings, created_at, updated_at)
+    VALUES (?, ?, ?, 'active', ?, ?, ?)
+  `);
+  tenants.forEach(tenant => insertTenant.run(
+    tenant.id, tenant.name, tenant.plan, tenant.settings, daysAgo(30), daysAgo(1)
+  ));
+
+  const identities = [
+    { email: 'admin.one@attest.local', tenant: 'default', role: 'admin' },
+    { email: 'admin.two@attest.local', tenant: 'default', role: 'admin' },
+    { email: 'approver.one@attest.local', tenant: 'default', role: 'approver', approver: 'Morgan Taylor' },
+    { email: 'approver.two@attest.local', tenant: 'default', role: 'approver', approver: 'Jamie Rivera' },
+    { email: 'approver.three@attest.local', tenant: 'default', role: 'approver', approver: 'Casey Morrison' },
+    { email: 'approver.four@attest.local', tenant: 'default', role: 'approver', approver: 'Riley Thompson' },
+    { email: 'approver.five@attest.local', tenant: 'default', role: 'approver', approver: 'Quinn Harrison' },
+    { email: 'auditor.one@attest.local', tenant: 'default', role: 'auditor' },
+    { email: 'auditor.two@attest.local', tenant: 'default', role: 'auditor' },
+    { email: 'superadmin.one@attest.local', tenant: 'default', role: 'admin', protected: 1 },
+    { email: 'superadmin.two@attest.local', tenant: 'default', role: 'admin', protected: 1 },
+    { email: 'admin.one@attest.local', tenant: 'tenant-beta', role: 'admin' },
+    { email: 'admin.two@attest.local', tenant: 'tenant-beta', role: 'auditor' },
+    { email: 'approver.one@attest.local', tenant: 'tenant-beta', role: 'approver', approver: 'Avery Chen' },
+    { email: 'approver.two@attest.local', tenant: 'tenant-beta', role: 'approver', approver: 'Jordan Lee' },
+    { email: 'auditor.one@attest.local', tenant: 'tenant-beta', role: 'auditor' },
+    { email: 'admin.beta@attest.local', tenant: 'tenant-beta', role: 'admin' },
+  ];
+  const insertAccount = db.prepare(`
+    INSERT OR IGNORE INTO user_accounts
+      (email, password_hash, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
+  `);
+  const fillSeedPassword = db.prepare(`
+    UPDATE user_accounts SET password_hash = ?, updated_at = ?
+    WHERE email = ? AND password_hash = ''
+  `);
+  const insertMembership = db.prepare(`
+    INSERT OR IGNORE INTO tenant_memberships
+      (email, tenant_id, role, approver_name, status, protected, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
+  `);
+  const fillApprover = db.prepare(`
+    UPDATE tenant_memberships SET approver_name = ?, updated_at = ?
+    WHERE email = ? AND tenant_id = ? AND approver_name = ''
+  `);
+  db.transaction(() => {
+    identities.forEach(identity => {
+      insertAccount.run(identity.email, demoPassword, now, now);
+      fillSeedPassword.run(demoPassword, now, identity.email);
+      insertMembership.run(
+        identity.email,
+        identity.tenant,
+        identity.role,
+        identity.approver || '',
+        identity.protected || 0,
+        now,
+        now
+      );
+      if (identity.approver) {
+        fillApprover.run(identity.approver, now, identity.email, identity.tenant);
+      }
+    });
+  })();
+  return demoPassword;
+}
+
+function ensureBetaSeed(db) {
+  const tenantId = 'tenant-beta';
+  const betaRoles = [
+    { role: 'BETA - FINANCE - BILLING', approver: 'Avery Chen', email: 'approver.one@attest.local', system: 'Oracle' },
+    { role: 'BETA - FINANCE - CASH APPLICATION', approver: 'Avery Chen', email: 'approver.one@attest.local', system: 'Oracle' },
+    { role: 'BETA - IT - CLOUD OPERATIONS', approver: 'Jordan Lee', email: 'approver.two@attest.local', system: 'Azure' },
+    { role: 'BETA - IT - SECURITY MONITORING', approver: 'Jordan Lee', email: 'approver.two@attest.local', system: 'Sentinel' },
+  ];
+  const insertRole = db.prepare(`
+    INSERT OR IGNORE INTO tenant_role_assignments
+      (tenant_id, role_name, approver_name, approver_email, system_name)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const insertTransaction = db.prepare(`
+    INSERT OR IGNORE INTO tenant_role_transactions
+      (tenant_id, role_name, row_index, row_json)
+    VALUES (?, ?, ?, ?)
+  `);
+  betaRoles.forEach((item, index) => {
+    insertRole.run(tenantId, item.role, item.approver, item.email, item.system);
+    insertTransaction.run(tenantId, item.role, 0, JSON.stringify([
+      item.role,
+      `BETA_TECH_${index + 1}`,
+      `${item.system} synthetic technical role`,
+      `BETA_PERMISSION_${index + 1}`,
+    ]));
+  });
+
+  const insertCampaign = db.prepare(`
+    INSERT OR IGNORE INTO campaigns
+      (id, tenant_id, name, description, framework, period, status, deadline,
+       approvers, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertCampaign.run(
+    'beta_access_q4', tenantId, 'BETA — Q4 Access Review',
+    'Synthetic Beta Manufacturing certification campaign', 'SOX', 'Q4 2026',
+    'active', '2026-12-15', JSON.stringify(['Avery Chen', 'Jordan Lee']),
+    'admin.one@attest.local', daysAgo(12), daysAgo(1)
+  );
+  insertCampaign.run(
+    'beta_cloud_review', tenantId, 'BETA — Cloud Privileged Access',
+    'Synthetic Azure privileged access campaign', 'NIST', '2026',
+    'draft', '2026-12-31', JSON.stringify(['Jordan Lee']),
+    'admin.one@attest.local', daysAgo(5), daysAgo(1)
+  );
+
+  db.prepare(`
+    INSERT OR IGNORE INTO submissions
+      (log_entry_id, submission_id, tenant_id, timestamp, approver,
+       submitted_by_email, impersonated, role_name, action, ritm, ritm_status,
+       action_details, comments, rejection_reason, row_index, campaign_id)
+    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, '', '', '', 1, ?)
+  `).run(
+    'beta-000001-001', 'B00001', tenantId, daysAgo(2), 'Avery Chen',
+    'approver.one@attest.local', 'BETA - FINANCE - BILLING',
+    'Keep Business Role', 'BETA-RITM-1001', 'Resolved', 'beta_access_q4'
+  );
+
+  db.prepare(`
+    INSERT OR IGNORE INTO sod_rules
+      (id, tenant_id, name, role_a, role_b, severity, description, framework,
+       created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'beta_sod_finance', tenantId, 'BETA-SOD-001: Billing + Cash Application',
+    'BETA - FINANCE - BILLING', 'BETA - FINANCE - CASH APPLICATION',
+    'high', 'Synthetic incompatible finance duties', 'SOX',
+    'admin.one@attest.local', daysAgo(8)
+  );
+  db.prepare(`
+    INSERT OR IGNORE INTO sod_conflicts
+      (id, tenant_id, rule_id, user_email, approver_name, role_a, role_b,
+       severity, detected_at, status, mitigated_by, mitigated_at, mitigation_notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', '', '', '')
+  `).run(
+    'beta_conflict_001', tenantId, 'beta_sod_finance',
+    'synthetic.finance.user@beta.test', 'Avery Chen',
+    'BETA - FINANCE - BILLING', 'BETA - FINANCE - CASH APPLICATION',
+    'high', daysAgo(3)
+  );
+
+  db.prepare(`
+    INSERT OR IGNORE INTO evidence_packages
+      (id, tenant_id, name, campaign_id, description, file_path, file_size,
+       generated_by, generated_at, share_token, share_expires_at)
+    VALUES (?, ?, ?, ?, ?, '', 0, ?, ?, '', '')
+  `).run(
+    'beta_ev_001', tenantId, 'BETA — Synthetic Q4 Evidence',
+    'beta_access_q4', 'Synthetic evidence placeholder for tenant wiring',
+    'admin.one@attest.local', daysAgo(1)
+  );
+
+  db.prepare(`
+    INSERT OR IGNORE INTO activity
+      (activity_id, tenant_id, timestamp, type, action, email, detail)
+    VALUES (?, ?, ?, 'CAMPAIGN', 'campaign_activated', ?, ?)
+  `).run(
+    'beta_activity_001', tenantId, hoursAgo(6), 'admin.one@attest.local',
+    'BETA — Q4 Access Review activated'
+  );
+  db.prepare(`
+    INSERT OR IGNORE INTO notifications
+      (id, tenant_id, type, title, body, link, icon, read, email, created_at)
+    VALUES (?, ?, 'campaign', ?, ?, '/campaigns.html', '📋', 0, ?, ?)
+  `).run(
+    'beta_notif_001', tenantId, 'BETA campaign active',
+    'BETA — Q4 Access Review is ready for synthetic testing.',
+    'admin.one@attest.local', hoursAgo(6)
+  );
+}
+
 // ── Step 2: Seed SQLite ──
 function seedDatabase() {
   // Import db module (after Excel files are generated so the data dir exists)
   const { getDb } = require('../stores/db');
   const db = getDb();
+  const demoPassword = ensureIdentitySeed(db);
 
   // Check if already seeded
   const existingCampaigns = db.prepare('SELECT COUNT(*) as cnt FROM campaigns').get();
@@ -162,6 +349,7 @@ function seedDatabase() {
     if (!dt) {
       db.prepare("INSERT INTO tenants (id, name, plan, status) VALUES (?, ?, ?, ?)").run('default', 'Default Organization', 'starter', 'active');
     }
+    ensureBetaSeed(db);
     return;
   }
 
@@ -177,8 +365,6 @@ function seedDatabase() {
   }
 
   // Users with roles: admin, approver, auditor — password: "password123" for all
-  const bcrypt = require('bcrypt');
-  const demoPassword = bcrypt.hashSync('password123', 10);
   const users = [
     { email: 'admin.one@attest.local', role: 'admin', protected: 0 },
     { email: 'admin.two@attest.local', role: 'admin', protected: 0 },
@@ -318,6 +504,8 @@ function seedDatabase() {
     insertNotif.run(uid('notif_'), 'default', n.type, n.title, n.body, n.link, n.icon, 0, 'admin.one@attest.local', hoursAgo(n.hours));
   }
   console.log('[seed] Notifications:', notifications.length);
+
+  ensureBetaSeed(db);
 
   console.log('[seed] ✅ Demo data seeded successfully!');
 }

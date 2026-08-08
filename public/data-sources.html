@@ -80,10 +80,12 @@
   }).catch(function(){});
 
   function loadDataStatus(){
-    fetch('/api/admin/data-status').then(function(r){return r.json();}).then(function(data){
-      if(data.roles.file){el('rolesBadge').textContent='Last upload: '+new Date(data.roles.file.modified).toLocaleDateString();el('rolesInfo').textContent=data.roles.total+' roles · '+data.roles.approvers+' approvers';}
-      if(data.transactions.file){el('txBadge').textContent='Last upload: '+new Date(data.transactions.file.modified).toLocaleDateString();el('txInfo').textContent=data.transactions.totalRows+' rows · '+data.transactions.rolesWithData+' role groups';}
-    }).catch(function(){});
+    fetch('/api/admin/data-status').then(function(r){if(!r.ok)throw new Error('Could not load data source status');return r.json();}).then(function(data){
+      el('rolesBadge').textContent=data.roles.file?'Last upload: '+new Date(data.roles.file.modified).toLocaleDateString():'Seed catalog';
+      el('rolesInfo').textContent=data.roles.total+' roles · '+data.roles.approvers+' approvers';
+      el('txBadge').textContent=data.transactions.file?'Last upload: '+new Date(data.transactions.file.modified).toLocaleDateString():'Seed catalog';
+      el('txInfo').textContent=data.transactions.totalRows+' rows · '+data.transactions.rolesWithData+' role groups';
+    }).catch(function(e){el('rolesInfo').textContent=e.message;el('txInfo').textContent=e.message;});
   }
 
   function setupDrop(dropId,inputId,statusId,endpoint,reloadFn){

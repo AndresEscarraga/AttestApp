@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:multitenant && npm run test:multitenant-ui",
+    "test:multitenant": "node scripts/test-multitenant.js",
+    "test:multitenant-ui": "node scripts/test-multitenant-ui.js",
+    "test:e2e": "node scripts/test-e2e.js",
     "build": "node scripts/build.js",
     "start": "node server.js",
     "start:local:admin": "set DEV_AUTH_EMAIL=admin.one@attest.local&& node server.js",

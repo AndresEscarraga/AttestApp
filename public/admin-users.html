@@ -22,26 +22,30 @@
 
   <div class="content">
     <div class="content-header">
-      <h1>Admin Users</h1>
-      <p>Manage the email addresses allowed to access admin-only tools. Technical Support admins are protected and cannot be removed.</p>
+      <h1>Users &amp; Roles</h1>
+      <p>Manage memberships and roles for the organization currently selected in the sidebar.</p>
     </div>
 
     <div class="card mb-16">
-      <div class="card-header"><h2>Add Admin User</h2></div>
+      <div class="card-header"><h2>Add Membership</h2></div>
       <div class="card-body">
         <form id="adminUserForm" style="display:flex;gap:8px;align-items:flex-end">
           <div class="form-group" style="flex:1;margin:0">
-            <label class="form-label">Admin email</label>
-            <input class="form-input" id="adminEmailInput" type="email" placeholder="admin@example.com" required />
+            <label class="form-label">User email</label>
+            <input class="form-input" id="adminEmailInput" type="email" placeholder="user@example.com" required />
           </div>
-          <button class="btn btn-primary" type="submit">Add admin</button>
+          <div class="form-group" style="width:180px;margin:0">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="memberRoleInput"><option value="admin">Administrator</option><option value="approver">Approver</option><option value="auditor">Auditor</option></select>
+          </div>
+          <button class="btn btn-primary" type="submit">Add membership</button>
         </form>
         <p class="text-sm text-danger mt-8" id="adminUserError" style="display:none"></p>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-header"><h2>Registered Admins</h2></div>
+      <div class="card-header"><h2>Organization Members</h2></div>
       <div class="card-body no-pad">
         <div class="table-scroll">
           <table class="data-table" id="adminUsersTable">
@@ -49,7 +53,7 @@
             <tbody id="adminUsersBody"></tbody>
           </table>
         </div>
-        <p class="text-sm text-muted" style="padding:16px;display:none" id="adminUsersEmpty">No admin users found.</p>
+        <p class="text-sm text-muted" style="padding:16px;display:none" id="adminUsersEmpty">No memberships found.</p>
       </div>
     </div>
   </div>

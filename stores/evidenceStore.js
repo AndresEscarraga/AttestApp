@@ -26,7 +26,8 @@ class EvidenceStore {
   }
 
   // ── Generate evidence package ──
-  async generate({ name, campaignId, description, generatedBy, submissions, activityLog, campaign }) {
+  async generate({ tenantId, name, campaignId, description, generatedBy, submissions, activityLog, campaign }) {
+    const tid = requireTenantId(tenantId);
     const id = newId();
     const generatedAt = new Date().toISOString();
     const safeName = name.replace(/[^a-z0-9_-]/gi, '_').substring(0, 80);
@@ -63,12 +64,13 @@ class EvidenceStore {
 
     // Persist record
     this.db.prepare(`
-      INSERT INTO evidence_packages (id, name, campaign_id, description, file_path, file_size, generated_by, generated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, campaignId || '', description || '', zipPath, stat.size, generatedBy, generatedAt);
+      INSERT INTO evidence_packages (id, tenant_id, name, campaign_id, description, file_path, file_size, generated_by, generated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, tid, name, campaignId || '', description || '', zipPath, stat.size, generatedBy, generatedAt);
 
     return {
       id,
+      tenant_id: tid,
       name,
       campaign_id: campaignId || '',
       description: description || '',
@@ -79,16 +81,17 @@ class EvidenceStore {
   }
 
   // ── Download package ──
-  async getById(id) {
-    const row = this.db.prepare('SELECT * FROM evidence_packages WHERE id = ?').get(id);
+  async getById(id, tenantId) {
+    const row = this.db.prepare('SELECT * FROM evidence_packages WHERE id = ? AND tenant_id = ?')
+      .get(id, requireTenantId(tenantId));
     if (!row) return null;
     return this._rowToPackage(row);
   }
 
   // ── List packages ──
   async listAll(filters = {}) {
-    let sql = 'SELECT * FROM evidence_packages WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM evidence_packages WHERE tenant_id = ?';
+    const params = [requireTenantId(filters.tenant_id)];
     if (filters.campaign_id) { sql += ' AND campaign_id = ?'; params.push(filters.campaign_id); }
     sql += ' ORDER BY generated_at DESC';
     if (filters.limit) { sql += ' LIMIT ?'; params.push(filters.limit); }
@@ -97,16 +100,17 @@ class EvidenceStore {
   }
 
   // ── Share with external auditor (temp link) ──
-  async generateShareLink(id) {
-    const pkg = await this.getById(id);
+  async generateShareLink(id, tenantId) {
+    const tid = requireTenantId(tenantId);
+    const pkg = await this.getById(id, tid);
     if (!pkg) return null;
     if (!fs.existsSync(pkg.file_path)) return null;
 
     const token = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
 
-    this.db.prepare('UPDATE evidence_packages SET share_token = ?, share_expires_at = ? WHERE id = ?')
-      .run(token, expiresAt, id);
+    this.db.prepare('UPDATE evidence_packages SET share_token = ?, share_expires_at = ? WHERE id = ? AND tenant_id = ?')
+      .run(token, expiresAt, id, tid);
 
     return { token, expiresAt };
   }
@@ -120,12 +124,13 @@ class EvidenceStore {
   }
 
   // ── Delete package ──
-  async delete(id) {
-    const pkg = await this.getById(id);
+  async delete(id, tenantId) {
+    const tid = requireTenantId(tenantId);
+    const pkg = await this.getById(id, tid);
     if (pkg && fs.existsSync(pkg.file_path)) {
       try { fs.unlinkSync(pkg.file_path); } catch {}
     }
-    const result = this.db.prepare('DELETE FROM evidence_packages WHERE id = ?').run(id);
+    const result = this.db.prepare('DELETE FROM evidence_packages WHERE id = ? AND tenant_id = ?').run(id, tid);
     return result.changes > 0;
   }
 
@@ -209,6 +214,12 @@ class EvidenceStore {
       'For questions, contact your system administrator.',
     ].join('\n');
   }
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) throw new Error('tenantId is required');
+  return tenantId;
 }
 
 function createEvidenceStore() {

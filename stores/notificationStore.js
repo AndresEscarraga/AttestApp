@@ -96,8 +96,9 @@ class SqliteNotificationStore {
     return row ? row.cnt : 0;
   }
 
-  async markRead(id) {
-    this.db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(id);
+  async markRead(id, tenant_id) {
+    this.db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND tenant_id = ?')
+      .run(id, String(tenant_id || ''));
   }
 
   async markAllRead(tenant_id = 'default') {

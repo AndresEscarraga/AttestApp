@@ -1,41 +1,43 @@
 // routes/dashboard.js — Dashboard stats, notifications
 module.exports = function register(deps) {
-  const { app, logStore, activityStore, campaignStore, sodStore, notificationStore, uniqueRoleNames } = deps;
+  const { app, logStore, activityStore, campaignStore, sodStore, notificationStore, roleCatalogStore } = deps;
 
   // ══════ DASHBOARD ══════
   app.get('/api/dashboard/stats', async (req, res) => {
     try {
-      const submissions = await logStore.readAll();
-      const totalRoles = uniqueRoleNames.length;
+      const submissions = await logStore.readAll({ tenantId: req.tenantId });
+      const roleNames = roleCatalogStore.listRoleNames(req.tenantId);
+      const totalRoles = roleNames.length;
       const reviewedRolesSet = new Set();
       submissions.forEach(s => { if (s.action && s.action !== '') reviewedRolesSet.add(s.roleName); });
       const reviewedCount = reviewedRolesSet.size;
       const progress = totalRoles > 0 ? Math.round((reviewedCount / totalRoles) * 100) : 0;
       const pendingCount = Math.max(0, totalRoles - reviewedCount);
-      const sodStats = await sodStore.getConflictStats();
-      const recentActivity = await activityStore.readAll({ limit: 10 });
+      const sodStats = await sodStore.getConflictStats(req.tenantId);
+      const recentActivity = await activityStore.readAll({ tenantId: req.tenantId, limit: 10 });
       res.json({ totalRoles, reviewedRoles: reviewedCount, progress, pendingCount, sodConflicts: sodStats.open, recentActivity });
     } catch (err) { console.error('GET /api/dashboard/stats failed:', err); res.status(500).json({ error: 'Failed to load dashboard stats.' }); }
   });
 
   app.get('/api/dashboard/recent-activity', async (req, res) => {
-    try { res.json(await activityStore.readAll({ limit: 10 })); }
+    try { res.json(await activityStore.readAll({ tenantId: req.tenantId, limit: 10 })); }
     catch (err) { console.error('GET /api/dashboard/recent-activity failed:', err); res.status(500).json({ error: 'Failed to load recent activity.' }); }
   });
 
   app.get('/api/dashboard/progress-by-system', async (req, res) => {
     try {
+      const roleNames = roleCatalogStore.listRoleNames(req.tenantId);
       const systems = {};
-      uniqueRoleNames.forEach(role => {
+      roleNames.forEach(role => {
         const parts = role.split(' - '); const system = parts.length >= 2 ? parts[1].trim() : 'Other';
         if (!system) return;
         if (!systems[system]) systems[system] = { total: 0, reviewed: 0 };
         systems[system].total += 1;
       });
-      const submissions = await logStore.readAll();
+      const submissions = await logStore.readAll({ tenantId: req.tenantId });
       const reviewedRolesSet = new Set();
       submissions.forEach(s => { if (s.action && s.action !== '') reviewedRolesSet.add(s.roleName); });
-      uniqueRoleNames.forEach(role => {
+      roleNames.forEach(role => {
         const parts = role.split(' - '); const system = parts.length >= 2 ? parts[1].trim() : 'Other';
         if (!system || !systems[system]) return;
         if (reviewedRolesSet.has(role)) systems[system].reviewed += 1;
@@ -47,15 +49,18 @@ module.exports = function register(deps) {
 
   app.get('/api/dashboard/active-campaigns', async (req, res) => {
     try {
-      const campaigns = await campaignStore.readAll({ status: 'active', limit: 5 });
+      const campaigns = await campaignStore.readAll({ tenant_id: req.tenantId, status: 'active', limit: 5 });
       if (!campaigns.length) {
-        const submissions = await logStore.readAll(); const approvers = new Set(submissions.map(s => s.approver));
+        const submissions = await logStore.readAll({ tenantId: req.tenantId }); const approvers = new Set(submissions.map(s => s.approver));
         const reviewedRolesSet = new Set(); submissions.forEach(s => { if (s.action && s.action !== '') reviewedRolesSet.add(s.roleName); });
-        const totalRoles = uniqueRoleNames.length; const progress = totalRoles > 0 ? Math.round((reviewedRolesSet.size / totalRoles) * 100) : 0;
+        const totalRoles = roleCatalogStore.listRoleNames(req.tenantId).length; const progress = totalRoles > 0 ? Math.round((reviewedRolesSet.size / totalRoles) * 100) : 0;
         return res.json([{ id: 'current', name: 'Current Access Review', framework: 'ITGC', period: 'Q3 2026', status: progress >= 100 ? 'completed' : 'active', deadline: '2026-08-31', approvers: approvers.size, totalRoles, reviewedRoles: reviewedRolesSet.size, progress }]);
       }
       const result = await Promise.all(campaigns.map(async (c) => {
-        const totalRoles = uniqueRoleNames.length; const submissions = await logStore.readAll();
+        const scopedRoles = new Set();
+        c.approvers.forEach(approver => roleCatalogStore.getRolesForApprover(req.tenantId, approver).forEach(role => scopedRoles.add(role)));
+        const totalRoles = scopedRoles.size;
+        const submissions = await logStore.readAll({ tenantId: req.tenantId, campaignId: c.id });
         const reviewedRolesSet = new Set(); submissions.forEach(s => { if (s.action && s.action !== '' && s.campaignId === c.id) reviewedRolesSet.add(s.roleName); });
         const progress = totalRoles > 0 ? Math.round((reviewedRolesSet.size / totalRoles) * 100) : 0;
         return { id: c.id, name: c.name, framework: c.framework, period: c.period, status: c.status, deadline: c.deadline, approvers: c.approvers.length, totalRoles, reviewedRoles: reviewedRolesSet.size, progress };
@@ -76,7 +81,7 @@ module.exports = function register(deps) {
   });
 
   app.patch('/api/notifications/:id/read', async (req, res) => {
-    try { await notificationStore.markRead(req.params.id); res.json({ ok: true }); }
+    try { await notificationStore.markRead(req.params.id, req.tenantId); res.json({ ok: true }); }
     catch (err) { res.status(500).json({ error: 'Failed to update notification.' }); }
   });
 

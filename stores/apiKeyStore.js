@@ -40,8 +40,9 @@ class ApiKeyStore {
     }));
   }
 
-  async revoke(id) {
-    const r = this.db.prepare("UPDATE api_keys SET revoked = 1 WHERE id = ?").run(id);
+  async revoke(id, tenantId) {
+    const r = this.db.prepare("UPDATE api_keys SET revoked = 1 WHERE id = ? AND tenant_id = ?")
+      .run(id, String(tenantId || ''));
     return r.changes > 0;
   }
 

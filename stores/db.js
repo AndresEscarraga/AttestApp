@@ -225,6 +225,82 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
   `);
 
+  // ── Phase 6: tenant memberships + tenant-scoped role catalog ──
+  migrate('006_tenant_memberships', `
+    CREATE TABLE IF NOT EXISTS user_accounts (
+      email TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL DEFAULT '',
+      display_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tenant_memberships (
+      email TEXT NOT NULL,
+      tenant_id TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'auditor',
+      approver_name TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
+      protected INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (email, tenant_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_memberships_tenant_role
+      ON tenant_memberships(tenant_id, role, status);
+    CREATE INDEX IF NOT EXISTS idx_memberships_email_status
+      ON tenant_memberships(email, status);
+
+    INSERT OR IGNORE INTO user_accounts (email, password_hash, created_at, updated_at)
+      SELECT email, COALESCE(password_hash, ''), created_at, created_at
+      FROM admin_users;
+    INSERT OR IGNORE INTO tenant_memberships
+      (email, tenant_id, role, protected, created_at, updated_at)
+      SELECT email, COALESCE(tenant_id, 'default'), COALESCE(role, 'admin'),
+             protected, created_at, created_at
+      FROM admin_users;
+  `);
+
+  migrate('006b_tenant_role_catalog', `
+    CREATE TABLE IF NOT EXISTS tenant_role_assignments (
+      tenant_id TEXT NOT NULL,
+      role_name TEXT NOT NULL,
+      approver_name TEXT NOT NULL DEFAULT '',
+      approver_email TEXT NOT NULL DEFAULT '',
+      system_name TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (tenant_id, role_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_role_assignments_approver
+      ON tenant_role_assignments(tenant_id, approver_name);
+    CREATE INDEX IF NOT EXISTS idx_role_assignments_email
+      ON tenant_role_assignments(tenant_id, approver_email);
+
+    CREATE TABLE IF NOT EXISTS tenant_role_transactions (
+      tenant_id TEXT NOT NULL,
+      role_name TEXT NOT NULL,
+      row_index INTEGER NOT NULL,
+      row_json TEXT NOT NULL,
+      PRIMARY KEY (tenant_id, role_name, row_index)
+    );
+    CREATE INDEX IF NOT EXISTS idx_role_transactions_role
+      ON tenant_role_transactions(tenant_id, role_name);
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_campaigns_tenant_status
+      ON campaigns(tenant_id, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_submissions_tenant_campaign
+      ON submissions(tenant_id, campaign_id, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_tenant_timestamp
+      ON activity(tenant_id, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_sod_rules_tenant
+      ON sod_rules(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sod_conflicts_tenant_status
+      ON sod_conflicts(tenant_id, status, detected_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_evidence_tenant_campaign
+      ON evidence_packages(tenant_id, campaign_id, generated_at DESC);
+  `);
+
   console.log(`[db] SQLite connected: ${DB_PATH}`);
   return db;
 }

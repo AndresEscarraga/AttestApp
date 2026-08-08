@@ -18,6 +18,7 @@ function normalizeEvent(event) {
     action: String(e.action || '').trim(),
     email: String(e.email || '').trim(),
     detail: String(e.detail || '').trim(),
+    tenantId: String(e.tenantId || '').trim(),
   };
 }
 
@@ -28,10 +29,10 @@ class SqliteActivityStore {
 
   async record(event) {
     const e = normalizeEvent(event);
-    const tenantId = e.tenantId || 'default';
+    if (!e.tenantId) throw new Error('tenantId is required');
     this.db.prepare(
       'INSERT OR REPLACE INTO activity (activity_id, tenant_id, timestamp, type, action, email, detail) VALUES (?,?,?,?,?,?,?)'
-    ).run(e.activityId, tenantId, e.timestamp, e.type, e.action, e.email, e.detail);
+    ).run(e.activityId, e.tenantId, e.timestamp, e.type, e.action, e.email, e.detail);
   }
 
   async readAll(filters = {}) {
@@ -50,6 +51,7 @@ class SqliteActivityStore {
     const rows = this.db.prepare(sql).all(...params);
     return rows.map(r => ({
       activityId: r.activity_id,
+      tenantId: r.tenant_id,
       timestamp: r.timestamp,
       type: r.type,
       action: r.action,

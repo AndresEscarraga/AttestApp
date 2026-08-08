@@ -75,14 +75,13 @@
       var fwBadge='badge-fw-'+ (c.framework||'').toLowerCase();
       var stBadge=c.status==='active'?'badge-info':c.status==='completed'?'badge-success':c.status==='draft'?'badge-purple':'badge-neutral';
       var stLabel=c.status==='active'?'In Progress':c.status==='completed'?'Completed':c.status==='draft'?'Scheduled':c.status;
-      var totalRoles=15;
-      // Calculate progress from real submissions
-      var progressPct=c.status==='completed'?100:(c.status==='draft'?0:15);
+      var totalRoles=Number(c.totalRoles)||0;
+      var progressPct=Number(c.progress)||0;
       html+='<tr><td><strong>'+esc(c.name)+'</strong></td>'+
         '<td><span class="badge '+fwBadge+'">'+esc(c.framework)+'</span></td>'+
         '<td>'+esc(c.period)+'</td><td class="num">'+(c.approvers||[]).length+'</td>'+
         '<td class="num">'+totalRoles+'</td>'+
-        '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="progress-fill '+(c.status==='completed'?'fill-green':'fill-teal')+'" style="width:'+progressPct+'%"></div></div>'+(c.status==='completed'?'100%':c.status==='draft'?'—':progressPct+'%')+'</div></td>'+
+        '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:80px"><div class="progress-fill '+(progressPct>=100?'fill-green':'fill-teal')+'" style="width:'+progressPct+'%"></div></div>'+progressPct+'%</div></td>'+
         '<td><span class="badge '+stBadge+'">'+stLabel+'</span></td>'+
         '<td><div class="btn-group">'+
           (c.status==='draft'?'<button class="btn btn-ghost btn-sm act-btn" data-action="active" data-id="'+c.id+'">Activate</button>':'')+

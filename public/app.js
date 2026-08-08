@@ -7,7 +7,7 @@
   const ACTIONS = ['Keep Business Role','Modify Business Role','Modify Technical Role','Reject Business Role'];
   const KEEP = ACTIONS[0], REJECT = ACTIONS[3];
 
-  const state = { email:'', approver:'', approverRoles:[], rowSeq:0, isAdmin:false, impersonated:false, submitting:false };
+  const state = { email:'', tenantId:'', approver:'', approverRoles:[], rowSeq:0, isAdmin:false, impersonated:false, submitting:false };
 
   const getEl = id => document.getElementById(id);
 
@@ -18,6 +18,7 @@
       const me = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(me.error || 'Could not verify your access.');
       state.email = me.email || '';
+      state.tenantId = me.tenantId || 'default';
       state.isAdmin = !!me.isAdmin;
       const params = new URLSearchParams(location.search);
       const imp = params.get('impersonate');
@@ -278,6 +279,8 @@
     } else if (action) {
       tr.dataset.confirmedAction = '';
       if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-info">' + Attest.escHtml(action) + '</span>';
+      var detailInput = tr.querySelector('textarea');
+      openActionModal(tr, detailInput ? detailInput.value : '');
     } else {
       tr.dataset.confirmedAction = '';
       if (tdStatus) tdStatus.innerHTML = '<span class="badge badge-warning">Pending</span>';
@@ -458,14 +461,14 @@
         txAcknowledged: tr.dataset.txAcknowledged === 'true'
       });
     });
-    var key = 'attest_draft_' + (state.approver || 'unknown');
+    var key = 'attest_draft_' + (state.tenantId || 'default') + '_' + (state.approver || 'unknown');
     localStorage.setItem(key, JSON.stringify(draft));
     if (window.Attest && Attest.showToast) Attest.showToast('Draft saved — ' + draft.length + ' role(s) preserved.', 'success');
   }
 
   // ── Restore draft from localStorage on load ──
   function restoreDraft() {
-    var key = 'attest_draft_' + (state.approver || 'unknown');
+    var key = 'attest_draft_' + (state.tenantId || 'default') + '_' + (state.approver || 'unknown');
     var raw = localStorage.getItem(key);
     if (!raw) return;
     try {

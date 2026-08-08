@@ -1,6 +1,7 @@
 // Admin user management.
 (function () {
   let admins = [];
+  let members = [];
   let protectedAdmins = [];
 
   const body = document.getElementById('adminUsersBody');
@@ -8,6 +9,7 @@
   const error = document.getElementById('adminUserError');
   const form = document.getElementById('adminUserForm');
   const input = document.getElementById('adminEmailInput');
+  const roleInput = document.getElementById('memberRoleInput');
 
   async function verifyAdmin() {
     const res = await fetch('/api/me');
@@ -26,6 +28,7 @@
       if (!res.ok) throw new Error('Could not load admin users.');
       const data = await res.json();
       admins = data.admins || [];
+      members = data.members || admins.map(email => ({ email, role:'admin', protected:false }));
       protectedAdmins = data.protectedAdmins || [];
       render();
     } catch (e) {
@@ -35,14 +38,17 @@
 
   function render() {
     body.innerHTML = '';
-    empty.hidden = admins.length > 0;
+    empty.hidden = members.length > 0;
     const frag = document.createDocumentFragment();
-    admins.forEach(email => {
+    members.forEach(member => {
+      const email = member.email;
       const tr = document.createElement('tr');
       const isProtected = protectedAdmins.includes(email);
       tr.appendChild(td(email));
       var typeCell = document.createElement('td');
-      typeCell.innerHTML = isProtected ? '<span class="badge badge-info">Technical Support</span>' : '<span class="badge badge-purple">Admin</span>';
+      var labels = {admin:'Administrator',approver:'Approver',auditor:'Auditor'};
+      var badges = {admin:'badge-purple',approver:'badge-info',auditor:'badge-teal'};
+      typeCell.innerHTML = isProtected ? '<span class="badge badge-info">Technical Support</span>' : '<span class="badge '+(badges[member.role]||'badge-neutral')+'">'+(labels[member.role]||member.role)+'</span>';
       tr.appendChild(typeCell);
       const action = document.createElement('td');
       const btn = document.createElement('button');
@@ -63,12 +69,12 @@
     return c;
   }
 
-  async function addAdmin(email) {
+  async function addAdmin(email, role) {
     error.textContent = '';
     const res = await fetch('/api/admin-users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, role: role || 'admin' }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Could not add admin user.');
@@ -92,7 +98,7 @@
   form.addEventListener('submit', async event => {
     event.preventDefault();
     try {
-      await addAdmin(input.value);
+      await addAdmin(input.value, roleInput ? roleInput.value : 'admin');
     } catch (e) {
       error.textContent = e.message || 'Could not add admin user.';
       error.style.display = 'block';
