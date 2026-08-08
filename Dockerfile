@@ -18,6 +18,10 @@ RUN npm rebuild better-sqlite3
 # Copy app source (before build so we can process HTML)
 COPY server.js ./
 COPY stores ./stores
+COPY routes ./routes
+COPY services ./services
+COPY http ./http
+COPY security ./security
 COPY public ./public
 COPY data/sources ./data/sources
 COPY scripts ./scripts
