@@ -44,8 +44,9 @@ class SqliteActivityStore {
     if (filters.email) { sql += ' AND email = ?'; params.push(filters.email); }
     sql += ' ORDER BY timestamp DESC';
     const limit = Number(filters.limit) > 0 ? Number(filters.limit) : DEFAULT_LIMIT;
-    sql += ' LIMIT ?';
-    params.push(limit);
+    const offset = Number(filters.offset) > 0 ? Number(filters.offset) : 0;
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     const rows = this.db.prepare(sql).all(...params);
     return rows.map(r => ({
       activityId: r.activity_id,

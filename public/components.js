@@ -18,7 +18,7 @@
     tenants: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="item-icon"><path d="M3 18V8l7-5 7 5v10H3z"/><line x1="8" y1="18" x2="8" y2="12"/><line x1="12" y1="18" x2="12" y2="12"/></svg>',
     settings: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="item-icon"><circle cx="10" cy="10" r="3"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.9 4.9l1.4 1.4m7.4 7.4l1.4 1.4M4.9 15.1l1.4-1.4m7.4-7.4l1.4-1.4"/></svg>',
     apikeys: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="item-icon"><circle cx="7" cy="10" r="5"/><path d="M11 10l3-3 2 2-1.5 1.5"/><circle cx="15" cy="15" r="2"/></svg>',
-    evidence: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="item-icon"><path d="M3 5h14v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/><path d="M3 5l2-3h10l2 3"/></svg>',
+    more: '<svg viewBox="0 0 20 20" fill="currentColor" class="item-icon"><circle cx="6" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="14" cy="10" r="1.5"/></svg>',
     logo: '<svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 3l6-2 6 2v5c0 2.5-2 5.5-6 8-4-2.5-6-5.5-6-8V3z"/><polyline points="7,9 9.5,12 14,7"/></svg>',
   };
 
@@ -116,11 +116,11 @@
         var t = function(id, icon, label, href){return '<button class="mobile-tab'+(a===id?' active':'')+'" onclick="location.href=\''+href+'\'"><div class="mobile-tab-wrapper">'+icon+'</div><span>'+label+'</span></button>';};
         this.innerHTML =
           '<div class="mobile-tabbar"><div class="mobile-tabbar-inner">' +
-            t('dashboard', '⊞', 'Dashboard', '/dashboard.html') +
-            t('reviews', '☰', 'Reviews', '/reviews.html') +
-            t('campaigns', '⊟', 'Campaigns', '/campaigns.html') +
-            t('audit', '☷', 'Audit', '/audit-trail.html') +
-            t('more', '⊡', 'More', '/settings.html') +
+            t('dashboard', I.dashboard.replace('class="item-icon"','style="width:22px;height:22px"'), 'Dashboard', '/dashboard.html') +
+            t('reviews', I.reviews.replace('class="item-icon"','style="width:22px;height:22px"'), 'Reviews', '/reviews.html') +
+            t('campaigns', I.campaigns.replace('class="item-icon"','style="width:22px;height:22px"'), 'Campaigns', '/campaigns.html') +
+            t('audit', I.audit.replace('class="item-icon"','style="width:22px;height:22px"'), 'Audit', '/audit-trail.html') +
+            t('more', I.more.replace('class="item-icon"','style="width:22px;height:22px"'), 'More', '/settings.html') +
           '</div></div>';
       }
     });

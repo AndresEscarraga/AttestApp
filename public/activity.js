@@ -1,6 +1,7 @@
 // Application activity log viewer (admin only).
 (function () {
   let events = [];
+  let pageSize = 50, offset = 0, hasMore = true;
 
   const body = document.getElementById('activityBody');
   const empty = document.getElementById('activityEmpty');
@@ -27,16 +28,23 @@
     return true;
   }
 
-  async function loadActivity() {
+  async function loadActivity(reset) {
     try {
-      const res = await fetch('/api/activity');
+      if (reset) { offset = 0; events = []; hasMore = true; }
+      const res = await fetch('/api/activity?limit=' + pageSize + '&offset=' + offset);
       if (!res.ok) throw new Error('Could not load activity log.');
-      events = await res.json();
+      const batch = await res.json();
+      if (batch.length < pageSize) hasMore = false;
+      events = events.concat(batch);
+      offset += batch.length;
       render();
-    } catch (e) {
-      events = [];
-      render();
-    }
+      const btn = document.getElementById('activityLoadMore');
+      const bar = document.getElementById('activityPagination');
+      const info = document.getElementById('activityPageInfo');
+      if (bar) bar.style.display = hasMore ? '' : 'none';
+      if (btn) { btn.disabled = !hasMore; btn.textContent = hasMore ? 'Load More' : 'All loaded'; }
+      if (info) info.textContent = 'Showing ' + events.length + ' events';
+    } catch (e) { events = []; render(); }
   }
 
   function formatTimestamp(ts) {
@@ -72,6 +80,8 @@
     const rows = filtered();
     body.innerHTML = '';
     empty.hidden = rows.length > 0;
+    const emptyState = document.getElementById('activityEmptyState');
+    if (emptyState) emptyState.style.display = rows.length === 0 && events.length === 0 ? '' : 'none';
     const frag = document.createDocumentFragment();
     rows.forEach(e => {
       const tr = document.createElement('tr');
@@ -147,7 +157,9 @@
   async function boot() {
     const ok = await verifyAdmin();
     if (!ok) return;
-    await loadActivity();
+    await loadActivity(true);
+    const loadMore = document.getElementById('activityLoadMore');
+    if (loadMore) loadMore.addEventListener('click', function() { loadActivity(false); });
   }
 
   boot();

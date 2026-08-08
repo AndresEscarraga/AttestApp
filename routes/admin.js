@@ -132,7 +132,7 @@ module.exports = function register(deps) {
 
   // ══════ ACTIVITY ══════
   app.get('/api/activity', requireAdmin, async (req, res) => {
-    try { const { type, email } = req.query; const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : undefined; res.json(await activityStore.readAll({ type, email, limit })); }
+    try { const { type, email } = req.query; const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : undefined; const offset = Number(req.query.offset) > 0 ? Number(req.query.offset) : 0; res.json(await activityStore.readAll({ type, email, limit, offset })); }
     catch (err) { console.error('GET /api/activity failed:', err); res.status(500).json({ error: 'failed to read activity log' }); }
   });
 };

@@ -14,6 +14,7 @@
   var RITM_STATUSES = ['Open','Resolved','On Hold','Cancelled'];
   var allEntries = [], sortBy = 'timestamp', sortDir = -1;
   var selApprovers = new Set(), selActions = new Set();
+  var pageSize = 50, offset = 0, hasMore = true;
   var el = function(id) { return document.getElementById(id); };
 
   // Init
@@ -31,13 +32,25 @@
       var sel = el('tenantSelector');
       if (sel) { sel.innerHTML = ''; me.tenants.forEach(function(t) { var o = document.createElement('option'); o.value = t.id; o.textContent = t.name; if (t.id === me.tenantId) o.selected = true; sel.appendChild(o); }); }
     }
-    await loadData();
+    await loadData(true);
     setupFilters();
+    var loadMore = el('logLoadMore');
+    if (loadMore) loadMore.addEventListener('click', function() { loadData(false); });
   }
 
-  async function loadData() {
-    var res = await fetch('/api/log'); if (!res.ok) { location.href = '/'; return; }
-    allEntries = await res.json(); populateFilterMenus(); render();
+  async function loadData(reset) {
+    if (reset) { offset = 0; allEntries = []; hasMore = true; }
+    var res = await fetch('/api/log?limit=' + pageSize + '&offset=' + offset);
+    if (!res.ok) { location.href = '/'; return; }
+    var batch = await res.json();
+    if (batch.length < pageSize) hasMore = false;
+    allEntries = allEntries.concat(batch);
+    offset += batch.length;
+    populateFilterMenus(); render();
+    var btn = el('logLoadMore'), bar = el('logPagination'), info = el('logPageInfo');
+    if (bar) bar.style.display = hasMore ? '' : 'none';
+    if (btn) { btn.disabled = !hasMore; btn.textContent = hasMore ? 'Load More' : 'All loaded'; }
+    if (info) info.textContent = 'Showing ' + allEntries.length + ' submissions';
   }
 
   // Filters
@@ -152,6 +165,8 @@
       tbody.appendChild(tr);
     });
     el('emptyMsg').hidden = data.length > 0;
+    var emptyState = el('logEmptyState');
+    if (emptyState) emptyState.style.display = data.length === 0 && allEntries.length === 0 ? '' : 'none';
     renderStats(data);
   }
 

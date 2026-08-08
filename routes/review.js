@@ -123,8 +123,8 @@ module.exports = function register(deps) {
   // GET /api/log (admin only)
   app.get('/api/log', requireAdmin, async (req, res) => {
     try {
-      const { approver, action, role } = req.query;
-      res.json(await logStore.readAll({ approver, action, role }));
+      const { approver, action, role, limit, offset } = req.query;
+      res.json(await logStore.readAll({ approver, action, role, limit: Number(limit) || undefined, offset: Number(offset) || 0 }));
     } catch (err) {
       console.error('GET /api/log failed:', err);
       res.status(500).json({ error: 'failed to read submissions' });
