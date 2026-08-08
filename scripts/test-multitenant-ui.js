@@ -69,7 +69,10 @@ async function run() {
   browser = await chromium.launch();
   const context = await browser.newContext();
   await context.addInitScript(token => {
-    if (!localStorage.getItem('attest_token')) localStorage.setItem('attest_token', token);
+    if (!localStorage.getItem('attest_e2e_auth_initialized')) {
+      localStorage.setItem('attest_token', token);
+      localStorage.setItem('attest_e2e_auth_initialized', '1');
+    }
   }, session.token);
   const page = await context.newPage();
   const pageErrors = [];
@@ -201,6 +204,42 @@ async function run() {
   ]);
   await waitForTenant(page, 'default');
   await page.waitForFunction(() => document.getElementById('campaignsBody').textContent.includes('Q3 SOX ITGC'));
+
+  await page.click('#sidebarUserArea');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('userMenu')).opacity === '1');
+  const userMenuLayout = await page.evaluate(() => {
+    const menu = document.getElementById('userMenu');
+    const rect = menu.getBoundingClientRect();
+    return {
+      hidden: menu.classList.contains('hidden'),
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      right: rect.right,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  assert.equal(userMenuLayout.hidden, false, 'Clicking the sidebar user must open its menu.');
+  assert(userMenuLayout.top >= 0 && userMenuLayout.bottom <= userMenuLayout.viewportHeight,
+    `User menu must remain vertically visible: ${JSON.stringify(userMenuLayout)}`);
+  assert(userMenuLayout.left >= 0 && userMenuLayout.right <= userMenuLayout.viewportWidth,
+    `User menu must remain horizontally visible: ${JSON.stringify(userMenuLayout)}`);
+
+  await Promise.all([
+    page.waitForURL(`${baseUrl}/login.html`),
+    page.click('#menuSignOut'),
+  ]);
+  assert.equal(await page.evaluate(() => localStorage.getItem('attest_token')), null, 'Sign out must remove the session token.');
+  await page.fill('#emailInput', 'admin.one@attest.local');
+  await page.fill('#passwordInput', 'password123');
+  await Promise.all([
+    page.waitForURL(`${baseUrl}/dashboard.html`),
+    page.click('#authBtn'),
+  ]);
+  await waitForTenant(page, 'default');
+  assert(await page.evaluate(() => Boolean(localStorage.getItem('attest_token'))), 'Login must persist a new session token.');
+  await page.waitForFunction(() => document.getElementById('sidebarName')?.textContent !== 'User');
 
   assert.deepEqual(pageErrors, [], `Browser errors:\n${pageErrors.join('\n')}`);
   console.log(`Multi-tenant UI tests passed across ${pages.length} pages.`);

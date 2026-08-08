@@ -94,7 +94,7 @@
             '<div class="sidebar-footer"><div class="sidebar-user" id="sidebarUserArea" title="Click for options">' +
               '<div class="avatar" id="sidebarAvatar">U</div><div class="user-info"><div class="user-name" id="sidebarName">User</div><div class="user-role" id="sidebarRole"></div></div>' +
               '<svg class="user-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-            '</div></div>' +
+            '</div>' +
             '<div class="user-menu hidden" id="userMenu">' +
               '<div class="user-menu-header"><div class="avatar avatar-lg" id="menuAvatar">U</div><div class="user-menu-info"><div class="user-menu-name" id="menuName">User</div><div class="user-menu-email" id="menuEmail"></div><div class="user-menu-role" id="menuRole"></div></div></div>' +
               '<div class="user-menu-divider"></div>' +
@@ -102,6 +102,7 @@
               '<button class="user-menu-item" onclick="location.href=\'/settings.html\'"><span class="umi-icon">⚙</span><span class="umi-label">Settings</span></button>' +
               '<div class="user-menu-divider"></div>' +
               '<button class="user-menu-item user-menu-signout" id="menuSignOut"><span class="umi-icon">🚪</span><span class="umi-label">Sign out</span></button>' +
+            '</div>' +
             '</div>' +
           '</aside>';
       }

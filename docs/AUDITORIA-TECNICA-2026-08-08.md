@@ -428,6 +428,22 @@ Implementado y validado el 2026-08-08:
 - acciones visibles quedan gobernadas por capability y la API conserva la decisión final server-side;
 - cambios de rol de membership se persisten por `(tenant_id,email)`; un usuario puede ser admin en A y auditor/approver en B sin alterar la otra membresía.
 
+### Estado de implementación — correcciones de navegación y sesión, bloque 1D
+
+Implementado y validado el 2026-08-08:
+
+- se reprodujo el sidebar aparentemente vacío en `http://localhost:3000/dashboard.html`: no era un defecto de zoom, ancho, `z-index` ni overlay; el proceso dev llevaba ejecutándose desde antes del cambio de contrato y su `/api/me` devolvía `role: admin` sin `capabilities`, por lo que el filtro deny-by-default ocultaba correctamente todos los enlaces;
+- se reinició exclusivamente el listener Node de `localhost:3000` y se verificó el contrato vigente de `/api/me`: rol `admin`, 23 capabilities y permisos `dashboard:read`/`campaign:read`; el sidebar volvió a renderizar 13 enlaces en cinco secciones;
+- la suite Playwright ahora falla si Dashboard y Campaigns no quedan visibles o si un usuario autorizado termina con `.sidebar-nav` vacío;
+- se corrigió la divergencia entre `public/components/sidebar.html` y el Web Component de `public/components.js`: `#userMenu` vuelve a ser hijo de `.sidebar-footer`, que es su containing block posicionado;
+- el menú de usuario deja de calcularse fuera del viewport (`y ≈ -201px`) y se validó en localhost completamente visible entre `y ≈ 630px` y `y ≈ 827px` dentro de un viewport de 900px;
+- el caché del Service Worker avanzó a `attest-phase1-v3` para retirar la versión anterior de `components.js`;
+- la regresión E2E ejecuta el flujo real login → abrir menú → logout → login: comprueba menú visible, token eliminado al salir, redirección a `/login.html`, nuevo token al autenticar, retorno a `/dashboard.html`, usuario `admin.one@attest.local` y tenant `default`;
+- el arnés Playwright sólo siembra el token inicial una vez; ya no lo reinyecta tras logout, de modo que la prueba verifica el comportamiento real de cierre de sesión;
+- `npm run test:multitenant-ui` permanece verde sobre 14 páginas y el recorrido local terminó sin errores JavaScript.
+
+Hallazgo residual documentado, no implementado en este bloque: al no configurar `JWT_SECRET` en desarrollo, cada reinicio genera un secreto nuevo e invalida tokens anteriores. El cliente conserva entonces el JWT obsoleto y varias cargas muestran `Authentication required` o `Could not load the active organization` en vez de realizar una única limpieza de sesión y redirección. La corrección posterior debe centralizar el manejo de `401` en `shared.js`: abortar requests, limpiar estado/token y navegar una sola vez a un redirect local validado. Esto no indica pérdida de tenants ni de datos seed.
+
 ### Estado de implementación — adelanto funcional SoD solicitado (ATT-009 y ATT-049)
 
 Implementado y validado el 2026-08-08, adelantando esta porción del modelo previsto para Fase 2:
@@ -454,6 +470,7 @@ Validado el 2026-08-08:
 - crear/modificar en B persiste exclusivamente en B; uploads B no cambian catálogo ni transacciones de A;
 - prueba Playwright que retrasa una respuesta A durante el switch confirma que nunca pinta después de activar B;
 - recorrido Playwright A → B → A sobre 14 páginas, incluyendo workflow UI de mitigación y reapertura SoD;
+- regresión de navegación autorizada y flujo login → menú de usuario visible → logout → login sobre el servidor real;
 - `npm test`, `npm run test:integration` y `npm run test:e2e` verdes;
 - `npm audit --audit-level=high` verde: cero vulnerabilidades high/critical. Permanecen cuatro moderadas y una low transitivas, fuera del gate acordado;
 - scan sin `catch {}` vacío en runtime y sin dependencia/import de `xlsx`.
