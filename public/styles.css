@@ -83,8 +83,9 @@ body.has-sidebar { display:flex; }
 .sidebar-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:var(--radius-sm); cursor:pointer; color:var(--text-sidebar); font-size:13px; font-weight:500; transition:all .12s; text-decoration:none; position:relative; white-space:nowrap; }
 .sidebar-item:hover { background:var(--bg-sidebar-hover); color:#fff; }
 .sidebar-item.active { background:var(--bg-sidebar-active); color:#fff; font-weight:600; }
-.sidebar-item .item-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; opacity:.75; }
+.sidebar-item .item-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; opacity:.65; }
 .sidebar-item.active .item-icon { opacity:1; }
+.sidebar-item .item-icon svg { width:18px; height:18px; }
 .sidebar-item .item-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:600; padding:1px 6px; border-radius:10px; }
 .sidebar-item .item-tag { margin-left:auto; font-size:10px; color:var(--accent); font-weight:600; background:rgba(8,145,178,.15); padding:1px 6px; border-radius:4px; }
 .sidebar-footer { padding:12px 14px; border-top:1px solid rgba(255,255,255,.06); position:relative; }
@@ -274,6 +275,19 @@ body.has-sidebar { display:flex; }
 /* ── Chart ── */
 .chart-row { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-bottom:24px; }
 @media(max-width:900px){ .chart-row{grid-template-columns:1fr;} }
+
+/* ── Empty State ── */
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-tertiary); }
+.empty-state-icon { font-size:32px; margin-bottom:8px; opacity:.6; }
+.empty-state-title { font-weight:600; color:var(--text-secondary); margin-bottom:4px; font-size:13px; }
+.empty-state-desc { font-size:12px; max-width:320px; margin:0 auto 16px; line-height:1.5; }
+
+/* ── Pagination ── */
+.pagination-bar { display:flex; align-items:center; justify-content:center; gap:8px; padding:16px 0; }
+.pagination-btn { padding:7px 14px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-surface); color:var(--text-primary); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; transition:all .12s; }
+.pagination-btn:hover { background:var(--bg-root); border-color:var(--accent); color:var(--accent); }
+.pagination-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pagination-info { font-size:11px; color:var(--text-tertiary); }
 
 /* ── Misc ── */
 .hidden { display:none !important; }

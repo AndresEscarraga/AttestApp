@@ -146,6 +146,17 @@
 
     // Init table sorting on sortable headers
     initTableSort();
+
+    // Register service worker for offline caching
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
+
+    // Inject PWA manifest link
+    var manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest.json';
+    document.head.appendChild(manifestLink);
   });
 
   // ── Notifications System ──
